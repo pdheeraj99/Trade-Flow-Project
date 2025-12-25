@@ -1,16 +1,17 @@
 package com.tradeflow.common.event;
 
-import com.tradeflow.common.dto.OrderBookDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.UUID;
+import java.util.List;
 
 /**
- * Event published when the order book changes
+ * Event published when the order book changes.
+ * Published by Matching Engine to Kafka.
  */
 @Data
 @Builder
@@ -18,13 +19,22 @@ import java.util.UUID;
 @AllArgsConstructor
 public class OrderBookUpdateEvent {
 
-    private UUID eventId;
-
     private String symbol;
 
-    private OrderBookDTO orderBook;
+    private List<PriceLevel> bids;
 
-    private long updateId;
+    private List<PriceLevel> asks;
 
-    private Instant eventTimestamp;
+    private Instant timestamp;
+
+    /**
+     * Price level with aggregated quantity
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PriceLevel {
+        private BigDecimal price;
+        private BigDecimal quantity;
+    }
 }

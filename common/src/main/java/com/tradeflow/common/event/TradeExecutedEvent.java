@@ -1,6 +1,5 @@
 package com.tradeflow.common.event;
 
-import com.tradeflow.common.enums.OrderSide;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,7 +10,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Event published when a trade is executed by the Matching Engine
+ * Event published when a trade is executed by the Matching Engine.
+ * Published to Kafka for OMS and other services to consume.
  */
 @Data
 @Builder
@@ -19,28 +19,25 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TradeExecutedEvent {
 
-    private UUID eventId;
-
     private UUID tradeId;
 
     private String symbol;
 
     // Buy side
     private UUID buyOrderId;
-    private UUID buyerId;
+    private UUID buyUserId;
 
     // Sell side
     private UUID sellOrderId;
-    private UUID sellerId;
+    private UUID sellUserId;
+
+    // Maker/Taker info
+    private UUID makerOrderId;
+    private UUID takerOrderId;
 
     // Trade details
     private BigDecimal price;
     private BigDecimal quantity;
-    private BigDecimal quoteAmount;
 
-    private OrderSide takerSide;
-
-    private Instant executedAt;
-
-    private Instant eventTimestamp;
+    private Instant timestamp;
 }
