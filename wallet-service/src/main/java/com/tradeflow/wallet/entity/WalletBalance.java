@@ -1,10 +1,12 @@
 package com.tradeflow.wallet.entity;
 
+import com.tradeflow.wallet.util.MoneyUtils;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -57,7 +59,7 @@ public class WalletBalance {
      * Total balance = available + reserved
      */
     public BigDecimal getTotalBalance() {
-        return availableBalance.add(reservedBalance);
+        return MoneyUtils.add(availableBalance, reservedBalance);
     }
 
     /**
@@ -68,41 +70,75 @@ public class WalletBalance {
     }
 
     /**
-     * Reserve funds from available balance
+     * Reserve funds from available balance (with scale)
      */
-    public void reserveFunds(BigDecimal amount) {
+    public void reserveFunds(BigDecimal amount, int scale) {
         if (!hasSufficientBalance(amount)) {
             throw new IllegalStateException("Insufficient available balance");
         }
-        this.availableBalance = this.availableBalance.subtract(amount);
-        this.reservedBalance = this.reservedBalance.add(amount);
+        this.availableBalance = this.availableBalance.subtract(amount)
+                .setScale(scale, RoundingMode.HALF_UP);
+        this.reservedBalance = this.reservedBalance.add(amount)
+                .setScale(scale, RoundingMode.HALF_UP);
     }
 
     /**
-     * Release reserved funds back to available
+     * Reserve funds from available balance (default scale)
      */
-    public void releaseFunds(BigDecimal amount) {
+    public void reserveFunds(BigDecimal amount) {
+        reserveFunds(amount, MoneyUtils.DEFAULT_SCALE);
+    }
+
+    /**
+     * Release reserved funds back to available (with scale)
+     */
+    public void releaseFunds(BigDecimal amount, int scale) {
         if (this.reservedBalance.compareTo(amount) < 0) {
             throw new IllegalStateException("Cannot release more than reserved");
         }
-        this.reservedBalance = this.reservedBalance.subtract(amount);
-        this.availableBalance = this.availableBalance.add(amount);
+        this.reservedBalance = this.reservedBalance.subtract(amount)
+                .setScale(scale, RoundingMode.HALF_UP);
+        this.availableBalance = this.availableBalance.add(amount)
+                .setScale(scale, RoundingMode.HALF_UP);
     }
 
     /**
-     * Debit from reserved (for completed trades)
+     * Release reserved funds back to available (default scale)
      */
-    public void debitFromReserved(BigDecimal amount) {
+    public void releaseFunds(BigDecimal amount) {
+        releaseFunds(amount, MoneyUtils.DEFAULT_SCALE);
+    }
+
+    /**
+     * Debit from reserved (for completed trades) with scale
+     */
+    public void debitFromReserved(BigDecimal amount, int scale) {
         if (this.reservedBalance.compareTo(amount) < 0) {
             throw new IllegalStateException("Cannot debit more than reserved");
         }
-        this.reservedBalance = this.reservedBalance.subtract(amount);
+        this.reservedBalance = this.reservedBalance.subtract(amount)
+                .setScale(scale, RoundingMode.HALF_UP);
     }
 
     /**
-     * Credit to available (for deposits or trade proceeds)
+     * Debit from reserved (for completed trades) default scale
+     */
+    public void debitFromReserved(BigDecimal amount) {
+        debitFromReserved(amount, MoneyUtils.DEFAULT_SCALE);
+    }
+
+    /**
+     * Credit to available (for deposits or trade proceeds) with scale
+     */
+    public void creditToAvailable(BigDecimal amount, int scale) {
+        this.availableBalance = this.availableBalance.add(amount)
+                .setScale(scale, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Credit to available (for deposits or trade proceeds) default scale
      */
     public void creditToAvailable(BigDecimal amount) {
-        this.availableBalance = this.availableBalance.add(amount);
+        creditToAvailable(amount, MoneyUtils.DEFAULT_SCALE);
     }
 }

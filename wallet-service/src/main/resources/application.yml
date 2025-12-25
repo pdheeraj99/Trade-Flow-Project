@@ -50,6 +50,20 @@ spring:
         prefetch: 10
         acknowledge-mode: manual
 
+# ============================================
+# TradeFlow Wallet Configuration
+# These values can be overridden via environment variables:
+# TRADEFLOW_WALLET_FAUCET_AMOUNT, TRADEFLOW_WALLET_FAUCET_CURRENCY, etc.
+# ============================================
+tradeflow:
+  wallet:
+    faucet:
+      amount: 10000.00           # Virtual currency amount on faucet claim
+      currency: USD               # Currency for faucet deposits
+      cooldown-seconds: 3600      # Cooldown period (1 hour = 3600 seconds)
+    precision:
+      scale: 8                    # Decimal precision (8 for satoshi-level crypto)
+
 # Actuator
 management:
   endpoints:
