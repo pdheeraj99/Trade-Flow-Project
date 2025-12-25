@@ -1,5 +1,7 @@
 package com.tradeflow.common.constants;
 
+import java.util.List;
+
 /**
  * Trading pair constants and configurations
  */
@@ -12,6 +14,9 @@ public final class TradingPairs {
     // Supported trading pairs
     public static final String BTC_USDT = "BTCUSDT";
     public static final String ETH_USDT = "ETHUSDT";
+
+    // List of all supported pairs
+    public static final List<String> SUPPORTED_PAIRS = List.of(BTC_USDT, ETH_USDT);
 
     // Currencies
     public static final String USD = "USD";
