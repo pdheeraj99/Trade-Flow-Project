@@ -11,6 +11,7 @@ public final class KafkaTopics {
 
     // Order processing
     public static final String ORDERS_INCOMING = "orders.incoming";
+    public static final String ORDERS_TO_MATCHING = "orders.to-matching"; // OMS -> Matching Engine
     public static final String ORDERS_MATCHED = "orders.matched";
     public static final String ORDERS_REJECTED = "orders.rejected";
 
