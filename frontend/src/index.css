@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #0B0E11;
+    --foreground: #EAECEF;
+    --card: #181A20;
+    --card-foreground: #EAECEF;
+    --popover: #181A20;
+    --popover-foreground: #EAECEF;
+    --primary: #FCD535;
+    /* Binance Yellow */
+    --primary-foreground: #181A20;
+    --secondary: #2B3139;
+    --secondary-foreground: #EAECEF;
+    --muted: #848E9C;
+    --muted-foreground: #5E6673;
+    --accent: #2B3139;
+    --accent-foreground: #EAECEF;
+    --destructive: #F6465D;
+    --destructive-foreground: #FFFFFF;
+    --border: #2B3139;
+    --input: #2B3139;
+    --ring: #FCD535;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
