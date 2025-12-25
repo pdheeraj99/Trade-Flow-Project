@@ -1,0 +1,56 @@
+# Build output
+target/
+**/target/
+
+# IDE
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+.vscode/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.local
+
+# Docker volumes (local)
+data/
+
+# Node modules (frontend)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Maven wrapper (if using)
+.mvn/
+
+# Compiled classes
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Test reports
+test-output/
+surefire-reports/
+
+# Coverage
+jacoco.exec
+coverage/

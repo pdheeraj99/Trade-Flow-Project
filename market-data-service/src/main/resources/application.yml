@@ -1,0 +1,61 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: market-data-service
+  
+  # Virtual Threads (Java 21)
+  threads:
+    virtual:
+      enabled: true
+
+  # Redis Configuration (Price Cache)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  # Kafka Configuration (Trade Events)
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: market-data-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.tradeflow.*
+
+# CoinGecko API Configuration
+coingecko:
+  api:
+    base-url: https://api.coingecko.com/api/v3
+    key: ${COINGECKO_API_KEY:}
+  cache:
+    ttl-seconds: 10          # Redis cache TTL
+    stale-threshold-seconds: 30  # Mark as stale after 30s
+
+# WebSocket Configuration
+websocket:
+  endpoint: /ws
+  allowed-origins: "*"
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+
+# Zipkin Tracing
+spring.zipkin:
+  base-url: http://localhost:9411
+
+logging:
+  level:
+    com.tradeflow: DEBUG

@@ -1,0 +1,103 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # Redis for Rate Limiting
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  cloud:
+    gateway:
+      routes:
+        # Auth Service Routes (No JWT validation)
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=0
+
+        # Wallet Service Routes
+        - id: wallet-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/wallet/**
+          filters:
+            - StripPrefix=0
+
+        # Order Service Routes
+        - id: oms-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - StripPrefix=0
+
+        # Market Data REST Routes
+        - id: market-data-rest
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/market/**
+          filters:
+            - StripPrefix=0
+
+        # WebSocket Route (Market Data)
+        - id: market-data-websocket
+          uri: ws://localhost:8085
+          predicates:
+            - Path=/ws/**
+
+      # CORS Configuration
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: false
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256}
+
+# Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      default:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+
+# Zipkin Tracing
+spring.zipkin:
+  base-url: http://localhost:9411
+
+logging:
+  level:
+    com.tradeflow: DEBUG
+    org.springframework.cloud.gateway: DEBUG

@@ -1,0 +1,52 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: audit-service
+  
+  # Virtual Threads (Java 21)
+  threads:
+    virtual:
+      enabled: true
+
+  # MongoDB Configuration
+  data:
+    mongodb:
+      uri: mongodb://tradeflow:tradeflow_secret@localhost:27017/tradeflow_audit?authSource=admin
+
+  # Kafka Configuration (Wire Tap - consume all events)
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: audit-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.tradeflow.*
+
+  # RabbitMQ Configuration (Wire Tap - consume all commands)
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: tradeflow
+    password: tradeflow_secret
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+
+# Zipkin Tracing
+spring.zipkin:
+  base-url: http://localhost:9411
+
+logging:
+  level:
+    com.tradeflow: DEBUG

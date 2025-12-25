@@ -1,0 +1,207 @@
+services:
+  # ============================================
+  # PostgreSQL 16 - Primary Database
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: tradeflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tradeflow
+      POSTGRES_PASSWORD: tradeflow_secret
+      POSTGRES_DB: tradeflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tradeflow -d tradeflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tradeflow-network
+
+  # ============================================
+  # Redis 7.2 - Cache & State Store
+  # ============================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: tradeflow-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tradeflow-network
+
+  # ============================================
+  # Zookeeper - Kafka Dependency
+  # ============================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: tradeflow-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tradeflow-network
+
+  # ============================================
+  # Apache Kafka 3.5 - Event Streaming
+  # ============================================
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: tradeflow-kafka
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 10
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - tradeflow-network
+
+  # ============================================
+  # Kafka UI - Cluster Management
+  # ============================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: tradeflow-kafka-ui
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: tradeflow-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - tradeflow-network
+
+  # ============================================
+  # RabbitMQ 3.12 - Command Messaging (Saga)
+  # ============================================
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: tradeflow-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: tradeflow
+      RABBITMQ_DEFAULT_PASS: tradeflow_secret
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tradeflow-network
+
+  # ============================================
+  # MongoDB 7.0 - Audit Logs
+  # ============================================
+  mongodb:
+    image: mongo:7.0
+    container_name: tradeflow-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: tradeflow
+      MONGO_INITDB_ROOT_PASSWORD: tradeflow_secret
+      MONGO_INITDB_DATABASE: tradeflow_audit
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tradeflow-network
+
+  # ============================================
+  # Zipkin - Distributed Tracing
+  # ============================================
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: tradeflow-zipkin
+    restart: unless-stopped
+    ports:
+      - "9411:9411"
+    environment:
+      STORAGE_TYPE: mem
+    networks:
+      - tradeflow-network
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  tradeflow-network:
+    driver: bridge
+    name: tradeflow-network
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data:
+    name: tradeflow-postgres-data
+  redis_data:
+    name: tradeflow-redis-data
+  zookeeper_data:
+    name: tradeflow-zookeeper-data
+  zookeeper_log:
+    name: tradeflow-zookeeper-log
+  kafka_data:
+    name: tradeflow-kafka-data
+  rabbitmq_data:
+    name: tradeflow-rabbitmq-data
+  mongodb_data:
+    name: tradeflow-mongodb-data
