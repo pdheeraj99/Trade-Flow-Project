@@ -2,6 +2,8 @@ import React from 'react';
 import { walletApi } from '../../api/wallet';
 import type { WalletBalance } from '../../api/wallet';
 import { useAuth } from '../../context/AuthContext';
+import clsx from 'clsx';
+import styles from './Wallet.module.css';
 
 interface WalletProps {
     balances: WalletBalance[];
@@ -26,40 +28,40 @@ const Wallet: React.FC<WalletProps> = ({ balances, onRefresh }) => {
     };
 
     return (
-        <div className="bg-dark-card border border-border rounded h-full flex flex-col">
-            <div className="p-3 border-b border-border flex justify-between items-center bg-dark-bg/50">
-                <h3 className="font-bold text-sm text-foreground">Wallet</h3>
+        <div className={styles.container}>
+            <div className={styles.header}>
+                <h3 className={styles.title}>Wallet</h3>
                 <button
                     onClick={handleFaucet}
                     disabled={isLoading}
-                    className="text-xs bg-primary/20 text-primary hover:bg-primary/30 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                    className={styles.faucetBtn}
                 >
                     {isLoading ? 'Claiming...' : 'Faucet'}
                 </button>
             </div>
-            <div className="overflow-auto flex-1">
-                <table className="w-full text-xs text-left">
-                    <thead className="text-dark-muted bg-dark-bg sticky top-0">
+            <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                    <thead className={styles.thead}>
                         <tr>
-                            <th className="p-2 font-medium">Asset</th>
-                            <th className="p-2 font-medium text-right">Total</th>
-                            <th className="p-2 font-medium text-right">Available</th>
-                            <th className="p-2 font-medium text-right">Reserved</th>
+                            <th className={styles.th}>Asset</th>
+                            <th className={clsx(styles.th, styles.thRight)}>Total</th>
+                            <th className={clsx(styles.th, styles.thRight)}>Available</th>
+                            <th className={clsx(styles.th, styles.thRight)}>Reserved</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/50">
+                    <tbody>
                         {balances.length > 0 ? (
                             balances.map((balance) => (
-                                <tr key={balance.currency} className="hover:bg-dark-bg/30 text-foreground">
-                                    <td className="p-2 font-bold">{balance.currency}</td>
-                                    <td className="p-2 text-right">{balance.total.toFixed(4)}</td>
-                                    <td className="p-2 text-right">{balance.available.toFixed(4)}</td>
-                                    <td className="p-2 text-right text-dark-muted">{balance.reserved.toFixed(4)}</td>
+                                <tr key={balance.currency} className={styles.row}>
+                                    <td className={styles.cellAsset}>{balance.currency}</td>
+                                    <td className={styles.cellNumber}>{balance.total.toFixed(4)}</td>
+                                    <td className={styles.cellNumber}>{balance.available.toFixed(4)}</td>
+                                    <td className={styles.cellReserved}>{balance.reserved.toFixed(4)}</td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={4} className="p-4 text-center text-dark-muted">No balances found</td>
+                                <td colSpan={4} className={styles.emptyState}>No balances found</td>
                             </tr>
                         )}
                     </tbody>

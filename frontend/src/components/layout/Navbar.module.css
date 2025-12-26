@@ -1,0 +1,237 @@
+/* Navbar Container */
+.navbar {
+    height: var(--nav-height);
+    /* 60px defined in index.css */
+    width: 100%;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-4);
+    background: rgba(24, 26, 32, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(43, 49, 57, 0.6);
+}
+
+/* Left Section */
+.leftSection {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+}
+
+/* Logo */
+.logo {
+    font-size: 1.25rem;
+    /* text-xl */
+    font-weight: 700;
+    color: var(--text-accent);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    transition: opacity 0.2s;
+}
+
+.logo:hover {
+    opacity: 0.9;
+}
+
+.logoIcon {
+    width: 32px;
+    height: 32px;
+    background-color: var(--text-accent);
+    border-radius: var(--card-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bg-primary);
+    font-weight: 900;
+    font-size: 0.875rem;
+}
+
+.logoText {
+    display: none;
+}
+
+@media (min-width: 640px) {
+    .logoText {
+        display: inline;
+    }
+}
+
+/* Navigation Links */
+.navLinks {
+    display: flex;
+    gap: var(--space-6);
+    font-size: 0.875rem;
+    /* text-sm */
+    font-weight: 500;
+}
+
+.navLink {
+    color: var(--text-secondary);
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.navLink:hover {
+    color: var(--text-accent);
+}
+
+.navLinkActive {
+    color: var(--text-accent);
+}
+
+/* Right Section */
+.rightSection {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+/* Connection Status */
+.statusContainer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.statusIndicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    position: relative;
+}
+
+.statusIndicator.connected {
+    background-color: var(--trade-buy);
+    box-shadow: 0 0 8px rgba(14, 203, 129, 0.6);
+}
+
+.statusIndicator.disconnected {
+    background-color: var(--trade-sell);
+    animation: pulse 1.5s infinite;
+}
+
+.statusIndicator.connecting {
+    background-color: var(--text-accent);
+    animation: pulse 1s infinite;
+}
+
+.statusText {
+    font-size: 0.75rem;
+    /* text-xs */
+    color: var(--text-secondary);
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .statusText {
+        display: inline;
+    }
+}
+
+/* User Actions */
+.walletLink {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.walletLink:hover {
+    color: var(--text-accent);
+}
+
+.walletText {
+    display: none;
+}
+
+@media (min-width: 640px) {
+    .walletText {
+        display: inline;
+    }
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    padding: 6px 12px;
+    background-color: rgba(43, 49, 57, 0.5);
+    /* bg-dark-hover/50 */
+    border-radius: var(--card-radius);
+}
+
+.userInfoIcon {
+    color: var(--text-accent);
+}
+
+.logoutBtn {
+    color: var(--text-secondary);
+    padding: var(--space-2);
+    border-radius: var(--card-radius);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logoutBtn:hover {
+    background-color: var(--bg-hover);
+    color: var(--trade-sell);
+}
+
+/* Auth Buttons */
+.authButtons {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.loginBtn {
+    padding: 6px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: color 0.2s;
+}
+
+.loginBtn:hover {
+    color: var(--text-accent);
+}
+
+.registerBtn {
+    padding: 6px 16px;
+    background-color: var(--text-accent);
+    color: var(--bg-primary);
+    font-size: 0.875rem;
+    font-weight: 700;
+    border-radius: var(--card-radius);
+    transition: opacity 0.2s;
+}
+
+.registerBtn:hover {
+    opacity: 0.9;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
+}

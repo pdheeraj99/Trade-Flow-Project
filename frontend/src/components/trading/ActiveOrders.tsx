@@ -1,59 +1,93 @@
 import React from 'react';
 import type { Order } from '../../api/orders';
 import clsx from 'clsx';
+import { X } from 'lucide-react';
+import styles from './ActiveOrders.module.css';
 
 interface ActiveOrdersProps {
     orders: Order[];
+    onCancelOrder?: (orderId: string) => void;
 }
 
-const ActiveOrders: React.FC<ActiveOrdersProps> = ({ orders }) => {
+const ActiveOrders: React.FC<ActiveOrdersProps> = ({ orders, onCancelOrder }) => {
+    const handleCancel = (orderId: string) => {
+        if (onCancelOrder) {
+            onCancelOrder(orderId);
+        } else {
+            console.log('Cancel order:', orderId);
+        }
+    };
+
     return (
-        <div className="bg-dark-card border border-border rounded h-full flex flex-col">
-            <div className="p-3 border-b border-border bg-dark-bg/50">
-                <h3 className="font-bold text-sm text-foreground">Active Orders</h3>
-            </div>
-            <div className="overflow-auto flex-1">
-                <table className="w-full text-xs text-left">
-                    <thead className="text-dark-muted bg-dark-bg sticky top-0">
+        <div className={styles.container}>
+            <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                    <thead className={styles.thead}>
                         <tr>
-                            <th className="p-2 font-medium">Time</th>
-                            <th className="p-2 font-medium">Symbol</th>
-                            <th className="p-2 font-medium">Side</th>
-                            <th className="p-2 font-medium text-right">Price</th>
-                            <th className="p-2 font-medium text-right">Qty</th>
-                            <th className="p-2 font-medium text-right">Filled</th>
-                            <th className="p-2 font-medium text-center">Status</th>
+                            <th className={styles.th}>Time</th>
+                            <th className={styles.th}>Symbol</th>
+                            <th className={styles.th}>Side</th>
+                            <th className={clsx(styles.th, styles.thRight)}>Price</th>
+                            <th className={clsx(styles.th, styles.thRight)}>Qty</th>
+                            <th className={clsx(styles.th, styles.thRight)}>Filled</th>
+                            <th className={clsx(styles.th, styles.thCenter)}>Status</th>
+                            <th className={clsx(styles.th, styles.thCenter)} style={{ width: '40px' }}></th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/50 text-foreground">
+                    <tbody>
                         {orders.length > 0 ? (
                             orders.map((order) => (
-                                <tr key={order.orderId} className="hover:bg-dark-bg/30">
-                                    <td className="p-2 text-dark-muted">{new Date(order.createdAt).toLocaleTimeString()}</td>
-                                    <td className="p-2 font-bold">{order.symbol}</td>
-                                    <td className={clsx("p-2 font-bold", {
-                                        'text-trade-buy': order.side === 'BUY',
-                                        'text-trade-sell': order.side === 'SELL'
+                                <tr
+                                    key={order.orderId}
+                                    className={styles.row}
+                                >
+                                    <td className={styles.cellTime}>
+                                        {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    </td>
+                                    <td className={styles.cellSymbol}>{order.symbol}</td>
+                                    <td className={clsx(styles.cellSide, {
+                                        [styles.cellSideBuy]: order.side === 'BUY',
+                                        [styles.cellSideSell]: order.side === 'SELL'
                                     })}>
                                         {order.side}
                                     </td>
-                                    <td className="p-2 text-right">{order.type === 'MARKET' ? 'Market' : order.price}</td>
-                                    <td className="p-2 text-right">{order.quantity}</td>
-                                    <td className="p-2 text-right">{order.filledQuantity}</td>
-                                    <td className="p-2 text-center">
-                                        <span className={clsx("px-1.5 py-0.5 rounded text-[10px]", {
-                                            'bg-yellow-500/20 text-yellow-500': order.status === 'OPEN' || order.status === 'PARTIALLY_FILLED',
-                                            'bg-green-500/20 text-green-500': order.status === 'FILLED',
-                                            'bg-red-500/20 text-red-500': order.status === 'CANCELLED' || order.status === 'REJECTED'
+                                    <td className={styles.cellMono}>
+                                        {order.type === 'MARKET' ? 'Market' : order.price?.toFixed(2)}
+                                    </td>
+                                    <td className={styles.cellMono}>{order.quantity.toFixed(5)}</td>
+                                    <td className={styles.cellMonoMuted}>
+                                        {order.filledQuantity?.toFixed(5) || '0.00000'}
+                                    </td>
+                                    <td className={styles.cellCenter}>
+                                        <span className={clsx(styles.statusBadge, {
+                                            [styles.statusOpen]: order.status === 'OPEN' || order.status === 'PARTIALLY_FILLED',
+                                            [styles.statusFilled]: order.status === 'FILLED',
+                                            [styles.statusCancelled]: order.status === 'CANCELLED' || order.status === 'REJECTED'
                                         })}>
                                             {order.status}
                                         </span>
+                                    </td>
+                                    <td className={styles.cellCenter}>
+                                        {(order.status === 'OPEN' || order.status === 'PARTIALLY_FILLED') && (
+                                            <button
+                                                onClick={() => handleCancel(order.orderId)}
+                                                className={styles.cancelBtn}
+                                                title="Cancel Order"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={7} className="p-4 text-center text-dark-muted">No active orders</td>
+                                <td colSpan={8} className={styles.emptyState}>
+                                    <div className={styles.emptyContent}>
+                                        <div className={styles.emptyIcon}>📋</div>
+                                        <span>No active orders</span>
+                                    </div>
+                                </td>
                             </tr>
                         )}
                     </tbody>

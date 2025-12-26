@@ -1,0 +1,161 @@
+/* Container */
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--bg-secondary);
+    overflow: hidden;
+}
+
+/* Header */
+.header {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    font-size: 10px;
+    color: var(--text-secondary);
+    padding: 6px var(--space-2);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.headerRight {
+    text-align: right;
+}
+
+/* Scrollable Areas */
+.scrollable {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.scrollableReverse {
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+/* Row Styling */
+.row {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    font-size: 0.75rem;
+    /* text-xs */
+    padding: 1px 0;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.row:hover {
+    background-color: var(--bg-hover);
+}
+
+.flashUp {
+    animation: flashUp 500ms ease-out;
+}
+
+.flashDown {
+    animation: flashDown 500ms ease-out;
+}
+
+@keyframes flashUp {
+    0% {
+        background-color: var(--trade-buy-bg);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+@keyframes flashDown {
+    0% {
+        background-color: var(--trade-sell-bg);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Depth Bars */
+.depthBar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.25;
+}
+
+.depthBarBid {
+    background: linear-gradient(to left, var(--trade-buy) 0%, transparent 100%);
+}
+
+.depthBarAsk {
+    background: linear-gradient(to left, var(--trade-sell) 0%, transparent 100%);
+}
+
+/* Cells */
+.cell {
+    padding-left: var(--space-2);
+    z-index: 10;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+}
+
+.cellQuantity {
+    text-align: right;
+    z-index: 10;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+}
+
+.cellTotal {
+    text-align: right;
+    padding-right: var(--space-2);
+    z-index: 10;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+}
+
+.textBuy {
+    color: var(--trade-buy);
+}
+
+.textSell {
+    color: var(--trade-sell);
+}
+
+/* Spread Indicator */
+.spreadContainer {
+    padding: 6px var(--space-2);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(11, 14, 17, 0.5);
+    /* bg-dark-bg/50 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.spreadPrice {
+    font-size: 1.125rem;
+    /* text-lg */
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.spreadDetails {
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.spreadValue {
+    color: var(--text-primary);
+}

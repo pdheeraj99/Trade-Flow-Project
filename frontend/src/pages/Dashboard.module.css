@@ -1,0 +1,234 @@
+/* Main Layout */
+.dashboardContainer {
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+}
+
+.gridContent {
+    flex: 1;
+    padding: var(--space-2);
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--space-2);
+    height: calc(100vh - var(--nav-height));
+    overflow: hidden;
+}
+
+/* Columns */
+.leftColumn {
+    grid-column: span 9;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    height: 100%;
+}
+
+.rightColumn {
+    grid-column: span 3;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    height: 100%;
+}
+
+@media (max-width: 1024px) {
+    .gridContent {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+    }
+
+    .leftColumn,
+    .rightColumn {
+        width: 100%;
+        height: auto;
+    }
+
+    .tickerChartSection,
+    .tabsSection,
+    .orderBookSection,
+    .orderFormSection {
+        height: 500px;
+        /* Fallback height for mobile stacking */
+    }
+}
+
+/* Ticker & Chart Section */
+.tickerChartSection {
+    height: 70%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.tickerHeader {
+    height: 56px;
+    /* h-14 */
+    flex-shrink: 0;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-4);
+}
+
+.tickerLeft {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.tickerSymbol {
+    font-size: 1.25rem;
+    /* text-xl */
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.tickerPrice {
+    font-size: 1.875rem;
+    /* text-3xl */
+    font-weight: 700;
+    font-family: var(--font-mono);
+    transition: color 0.2s;
+}
+
+.tickerStats {
+    display: flex;
+    gap: var(--space-8);
+    font-size: 0.75rem;
+    /* text-xs */
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+}
+
+.statLabel {
+    color: var(--text-secondary);
+}
+
+.statValue {
+    color: var(--text-primary);
+}
+
+.chartContainer {
+    flex: 1;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    padding: var(--space-2);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Tabs Section (Active Orders / Wallet) */
+.tabsSection {
+    height: 30%;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tabsHeader {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tabButton {
+    padding: var(--space-2) var(--space-4);
+    font-size: 0.875rem;
+    /* text-sm */
+    font-weight: 700;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+}
+
+.tabButton:hover {
+    color: var(--text-primary);
+}
+
+.tabButtonActive {
+    color: var(--text-accent);
+    border-bottom-color: var(--text-accent);
+}
+
+.tabContent {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Right Column Sections */
+.orderBookSection {
+    height: 60%;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+}
+
+.orderFormSection {
+    height: 40%;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+}
+
+/* Utilities for dynamic colors */
+.textBuy {
+    color: var(--trade-buy);
+}
+
+.textSell {
+    color: var(--trade-sell);
+}
+
+.textNeutral {
+    color: var(--text-primary);
+}
+
+/* Connection Indicator */
+.connectionDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.dotConnected {
+    background-color: var(--trade-buy);
+}
+
+.dotError {
+    background-color: var(--trade-sell);
+    animation: pulse 1s infinite;
+}
+
+.dotConnecting {
+    background-color: var(--text-accent);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
+}

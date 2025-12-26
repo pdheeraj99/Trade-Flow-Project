@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
+import styles from './Auth.module.css';
 
 const Register: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -58,24 +59,24 @@ const Register: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <div className="bg-card p-8 rounded-lg border border-border w-full max-w-md shadow-lg">
-                <h2 className="text-3xl font-bold text-primary mb-6 text-center">Create Account</h2>
+        <div className={styles.container}>
+            <div className={styles.card}>
+                <h2 className={styles.title}>Create Account</h2>
 
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded mb-4 text-sm text-center">
+                    <div className={styles.error}>
                         {error}
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Username *</label>
+                <form onSubmit={handleSubmit} className={styles.form}>
+                    <div className={styles.inputGroup}>
+                        <label className={styles.label}>Username *</label>
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                            className={styles.input}
                             placeholder="johndoe"
                             required
                             minLength={3}
@@ -83,61 +84,61 @@ const Register: React.FC = () => {
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-1">First Name</label>
+                    <div className={styles.row}>
+                        <div className={styles.inputGroup}>
+                            <label className={styles.label}>First Name</label>
                             <input
                                 type="text"
                                 value={firstName}
                                 onChange={(e) => setFirstName(e.target.value)}
-                                className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                                className={styles.input}
                                 placeholder="John"
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-1">Last Name</label>
+                        <div className={styles.inputGroup}>
+                            <label className={styles.label}>Last Name</label>
                             <input
                                 type="text"
                                 value={lastName}
                                 onChange={(e) => setLastName(e.target.value)}
-                                className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                                className={styles.input}
                                 placeholder="Doe"
                             />
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Email *</label>
+                    <div className={styles.inputGroup}>
+                        <label className={styles.label}>Email *</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                            className={styles.input}
                             placeholder="user@example.com"
                             required
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Password *</label>
+                    <div className={styles.inputGroup}>
+                        <label className={styles.label}>Password *</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                            className={styles.input}
                             placeholder="••••••••"
                             required
                             minLength={8}
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Confirm Password *</label>
+                    <div className={styles.inputGroup}>
+                        <label className={styles.label}>Confirm Password *</label>
                         <input
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                            className={styles.input}
                             placeholder="••••••••"
                             required
                         />
@@ -146,14 +147,14 @@ const Register: React.FC = () => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-primary text-primary-foreground font-bold py-2 rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+                        className={styles.submitBtn}
                     >
                         {isLoading ? 'Creating Account...' : 'Register'}
                     </button>
                 </form>
 
-                <p className="mt-4 text-center text-muted-foreground">
-                    Already have an account? <Link to="/login" className="text-primary hover:underline">Login</Link>
+                <p className={styles.footer}>
+                    Already have an account? <Link to="/login" className={styles.link}>Login</Link>
                 </p>
             </div>
         </div>

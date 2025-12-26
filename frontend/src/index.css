@@ -1,43 +1,168 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-@layer base {
-  :root {
-    --background: #0B0E11;
-    --foreground: #EAECEF;
-    --card: #181A20;
-    --card-foreground: #EAECEF;
-    --popover: #181A20;
-    --popover-foreground: #EAECEF;
-    --primary: #FCD535;
-    /* Binance Yellow */
-    --primary-foreground: #181A20;
-    --secondary: #2B3139;
-    --secondary-foreground: #EAECEF;
-    --muted: #848E9C;
-    --muted-foreground: #5E6673;
-    --accent: #2B3139;
-    --accent-foreground: #EAECEF;
-    --destructive: #F6465D;
-    --destructive-foreground: #FFFFFF;
-    --border: #2B3139;
-    --input: #2B3139;
-    --ring: #FCD535;
-    --radius: 0.5rem;
+/* =========================================
+   1. CSS VARIABLES (THEMING)
+   ========================================= */
+:root {
+  /* Colors - Base */
+  --bg-primary: #0b0e11;
+  --bg-secondary: #181a20;
+  --bg-hover: #2b3139;
+
+  /* Colors - Text */
+  --text-primary: #eaecef;
+  --text-secondary: #848e9c;
+  --text-accent: #FCD535;
+  --text-inverse: #181a20;
+
+  /* Colors - Trading */
+  --trade-buy: #0ecb81;
+  --trade-buy-hover: #0fb876;
+  --trade-buy-bg: rgba(14, 203, 129, 0.15);
+  --trade-sell: #f6465d;
+  --trade-sell-hover: #e5394d;
+  --trade-sell-bg: rgba(246, 70, 93, 0.15);
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Components */
+  --border-color: #2b3139;
+  --card-radius: 8px;
+  --nav-height: 60px;
+}
+
+/* =========================================
+   2. CSS RESET
+   ========================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* =========================================
+   3. UTILITIES & ANIMATIONS
+   ========================================= */
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-hover) var(--bg-primary);
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(24, 26, 32, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(43, 49, 57, 0.6);
+}
+
+/* Keyframes */
+@keyframes flashUp {
+  0% {
+    background-color: rgba(14, 203, 129, 0.4);
+  }
+
+  100% {
+    background-color: transparent;
   }
 }
 
-@layer base {
-  * {
-    border-color: var(--border);
+@keyframes flashDown {
+  0% {
+    background-color: rgba(246, 70, 93, 0.4);
   }
 
-  body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  100% {
+    background-color: transparent;
   }
+}
+
+/* Animation Classes */
+.flash-up {
+  animation: flashUp 500ms ease-out;
+}
+
+.flash-down {
+  animation: flashDown 500ms ease-out;
+}
+
+/* Monospace Helpers */
+.font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }

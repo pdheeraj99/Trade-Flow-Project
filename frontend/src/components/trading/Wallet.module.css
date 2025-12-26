@@ -1,0 +1,119 @@
+/* Container */
+.container {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.header {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(11, 14, 17, 0.5);
+    /* bg-dark-bg/50 */
+}
+
+.title {
+    font-weight: 700;
+    font-size: 0.875rem;
+    /* text-sm */
+    color: var(--text-primary);
+}
+
+.faucetBtn {
+    font-size: 0.75rem;
+    /* text-xs */
+    background-color: rgba(252, 213, 53, 0.2);
+    /* primary/20 */
+    color: var(--text-accent);
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    font-weight: 600;
+}
+
+.faucetBtn:hover:not(:disabled) {
+    background-color: rgba(252, 213, 53, 0.3);
+}
+
+.faucetBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Table */
+.tableContainer {
+    overflow: auto;
+    flex: 1;
+}
+
+.table {
+    width: 100%;
+    font-size: 0.75rem;
+    /* text-xs */
+    text-align: left;
+    border-collapse: collapse;
+}
+
+.thead {
+    color: var(--text-secondary);
+    background-color: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.th {
+    padding: 8px;
+    font-weight: 500;
+}
+
+.thRight {
+    text-align: right;
+}
+
+/* Rows */
+.row {
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(43, 49, 57, 0.5);
+    /* divide color */
+    transition: background-color 0.15s;
+}
+
+.row:hover {
+    background-color: rgba(11, 14, 17, 0.3);
+}
+
+.cell {
+    padding: 8px;
+}
+
+.cellAsset {
+    padding: 8px;
+    font-weight: 700;
+}
+
+.cellNumber {
+    padding: 8px;
+    text-align: right;
+    font-family: var(--font-mono);
+}
+
+.cellReserved {
+    padding: 8px;
+    text-align: right;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+.emptyState {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-secondary);
+}

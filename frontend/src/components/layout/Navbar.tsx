@@ -1,9 +1,16 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, User, Wallet } from 'lucide-react';
+import { LogOut, User, Wallet, Activity } from 'lucide-react';
+import clsx from 'clsx';
+import styles from './Navbar.module.css';
 
-const Navbar: React.FC = () => {
+interface NavbarProps {
+    isConnected?: boolean;
+    connectionError?: string | null;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ isConnected = false, connectionError = null }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
@@ -12,42 +19,82 @@ const Navbar: React.FC = () => {
         navigate('/login');
     };
 
+    // Determine connection status
+    const connectionStatus = isConnected ? 'connected' : connectionError ? 'disconnected' : 'connecting';
+    const statusTooltip = isConnected ? 'Connected' : connectionError || 'Connecting...';
+
     return (
-        <nav className="h-14 bg-dark-card border-b border-border flex items-center justify-between px-4">
-            <div className="flex items-center gap-8">
-                <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
-                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-black font-black">TF</div>
-                    TradeFlow
+        <nav className={styles.navbar}>
+            <div className={styles.leftSection}>
+                {/* Logo */}
+                <Link to="/" className={styles.logo}>
+                    <div className={styles.logoIcon}>
+                        TF
+                    </div>
+                    <span className={styles.logoText}>TradeFlow</span>
                 </Link>
-                <div className="flex gap-6 text-sm font-medium text-dark-text">
-                    <Link to="/dashboard" className="hover:text-primary transition-colors">Markets</Link>
-                    <Link to="/dashboard" className="hover:text-primary transition-colors text-primary">Trade</Link>
-                    <Link to="#" className="hover:text-primary transition-colors">Derivatives</Link>
+
+                {/* Navigation Links */}
+                <div className={styles.navLinks}>
+                    <Link to="/dashboard" className={styles.navLink}>
+                        Markets
+                    </Link>
+                    <Link to="/dashboard" className={clsx(styles.navLink, styles.navLinkActive)}>
+                        <Activity size={14} />
+                        Trade
+                    </Link>
+                    <Link to="#" className={styles.navLink}>
+                        Derivatives
+                    </Link>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className={styles.rightSection}>
+                {/* Connection Status Indicator */}
+                <div className={styles.statusContainer} title={statusTooltip}>
+                    <div className={clsx(styles.statusIndicator, styles[connectionStatus])} />
+                    <span className={styles.statusText}>
+                        {isConnected ? 'Live' : 'Offline'}
+                    </span>
+                </div>
+
                 {user ? (
                     <>
-                        <div className="flex items-center gap-2 text-sm text-dark-text hover:text-primary cursor-pointer">
-                            <Wallet size={18} />
-                            <span>Wallet</span>
+                        {/* Wallet Link */}
+                        <div className={styles.walletLink}>
+                            <Wallet size={16} />
+                            <span className={styles.walletText}>Wallet</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-dark-text">
-                            <User size={18} />
-                            <span>{user.email}</span>
+
+                        {/* User Info */}
+                        <div className={styles.userInfo}>
+                            <User size={16} className={styles.userInfoIcon} />
+                            <span className="max-w-[120px] truncate">{user.email}</span>
                         </div>
+
+                        {/* Logout */}
                         <button
                             onClick={handleLogout}
-                            className="text-dark-muted hover:text-white transition-colors"
+                            className={styles.logoutBtn}
+                            title="Logout"
                         >
                             <LogOut size={18} />
                         </button>
                     </>
                 ) : (
-                    <div className="flex gap-2">
-                        <Link to="/login" className="px-4 py-1.5 text-sm font-medium hover:text-primary transition-colors">Log In</Link>
-                        <Link to="/register" className="px-4 py-1.5 bg-primary text-black text-sm font-bold rounded hover:opacity-90 transition-opacity">Register</Link>
+                    <div className={styles.authButtons}>
+                        <Link
+                            to="/login"
+                            className={styles.loginBtn}
+                        >
+                            Log In
+                        </Link>
+                        <Link
+                            to="/register"
+                            className={styles.registerBtn}
+                        >
+                            Register
+                        </Link>
                     </div>
                 )}
             </div>

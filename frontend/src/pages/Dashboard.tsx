@@ -13,6 +13,7 @@ import Wallet from '../components/trading/Wallet';
 import ActiveOrders from '../components/trading/ActiveOrders';
 import { useMarketStream } from '../hooks/useMarketStream';
 import clsx from 'clsx';
+import styles from './Dashboard.module.css';
 
 // Initial dummy data for chart history (before backend history API is ready)
 const generateInitialChartData = (): CandlestickData[] => {
@@ -201,26 +202,26 @@ const Dashboard: React.FC = () => {
         : tickerData?.price || '---';
 
     return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col">
-            <Navbar />
+        <div className={styles.dashboardContainer}>
+            <Navbar isConnected={isConnected} connectionError={wsError} />
 
-            <div className="flex-1 p-2 grid grid-cols-12 gap-2 h-[calc(100vh-56px)] overflow-hidden">
+            <div className={styles.gridContent}>
                 {/* Left Column - Chart & Ticker & Bottom Panel (9 col) */}
-                <div className="col-span-9 flex flex-col gap-2 h-full">
+                <div className={styles.leftColumn}>
                     {/* Top: Ticker & Chart (70%) */}
-                    <div className="h-[70%] flex flex-col gap-2">
+                    <div className={styles.tickerChartSection}>
                         {/* Ticker Header */}
-                        <div className="h-14 shrink-0 bg-dark-card border border-border rounded flex items-center px-4 justify-between">
-                            <div className="flex items-center gap-4">
-                                <h1 className="text-xl font-bold text-foreground">BTC/USDT</h1>
+                        <div className={styles.tickerHeader}>
+                            <div className={styles.tickerLeft}>
+                                <h1 className={styles.tickerSymbol}>BTC/USDT</h1>
 
                                 {/* Live Price with Trend Color */}
                                 <span className={clsx(
-                                    "text-3xl font-mono font-bold transition-colors duration-200",
+                                    styles.tickerPrice,
                                     {
-                                        'text-trade-buy': priceTrend === 'up',
-                                        'text-trade-sell': priceTrend === 'down',
-                                        'text-foreground': priceTrend === 'neutral',
+                                        [styles.textBuy]: priceTrend === 'up',
+                                        [styles.textSell]: priceTrend === 'down',
+                                        [styles.textNeutral]: priceTrend === 'neutral',
                                     }
                                 )}>
                                     ${displayPrice}
@@ -228,56 +229,54 @@ const Dashboard: React.FC = () => {
 
                                 {/* Connection Status Indicator */}
                                 <div className={clsx(
-                                    "w-2 h-2 rounded-full",
+                                    styles.connectionDot,
                                     {
-                                        'bg-green-500': isConnected,
-                                        'bg-red-500 animate-pulse': !isConnected && wsError,
-                                        'bg-yellow-500 animate-pulse': !isConnected && !wsError,
+                                        [styles.dotConnected]: isConnected,
+                                        [styles.dotError]: !isConnected && wsError,
+                                        [styles.dotConnecting]: !isConnected && !wsError,
                                     }
                                 )} title={isConnected ? 'Connected' : wsError || 'Connecting...'} />
                             </div>
 
-                            <div className="flex gap-8 text-xs">
-                                <div>
-                                    <div className="text-dark-muted">24h Change</div>
+                            <div className={styles.tickerStats}>
+                                <div className={styles.statItem}>
+                                    <div className={styles.statLabel}>24h Change</div>
                                     <div className={clsx({
-                                        'text-trade-buy': tickerData?.priceChangePercent?.startsWith('+') || (parseFloat(tickerData?.priceChangePercent || '0') > 0),
-                                        'text-trade-sell': tickerData?.priceChangePercent?.startsWith('-') || (parseFloat(tickerData?.priceChangePercent || '0') < 0),
-                                        'text-foreground': !tickerData?.priceChangePercent,
+                                        [styles.textBuy]: tickerData?.priceChangePercent?.startsWith('+') || (parseFloat(tickerData?.priceChangePercent || '0') > 0),
+                                        [styles.textSell]: tickerData?.priceChangePercent?.startsWith('-') || (parseFloat(tickerData?.priceChangePercent || '0') < 0),
+                                        [styles.textNeutral]: !tickerData?.priceChangePercent,
                                     })}>
                                         {tickerData?.priceChangePercent ? `${tickerData.priceChangePercent}%` : '---'}
                                     </div>
                                 </div>
-                                <div>
-                                    <div className="text-dark-muted">24h High</div>
-                                    <div className="text-foreground">{tickerData?.high24h || '---'}</div>
+                                <div className={styles.statItem}>
+                                    <div className={styles.statLabel}>24h High</div>
+                                    <div className={styles.statValue}>{tickerData?.high24h || '---'}</div>
                                 </div>
-                                <div>
-                                    <div className="text-dark-muted">24h Low</div>
-                                    <div className="text-foreground">{tickerData?.low24h || '---'}</div>
+                                <div className={styles.statItem}>
+                                    <div className={styles.statLabel}>24h Low</div>
+                                    <div className={styles.statValue}>{tickerData?.low24h || '---'}</div>
                                 </div>
-                                <div>
-                                    <div className="text-dark-muted">24h Volume</div>
-                                    <div className="text-foreground">{tickerData?.volume24h || '---'}</div>
+                                <div className={styles.statItem}>
+                                    <div className={styles.statLabel}>24h Volume</div>
+                                    <div className={styles.statValue}>{tickerData?.volume24h || '---'}</div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Chart */}
-                        <div className="flex-1 bg-dark-card border border-border rounded p-2 overflow-hidden relative">
+                        <div className={styles.chartContainer}>
                             <TradingChart data={chartData} symbol={symbol} />
                         </div>
                     </div>
 
                     {/* Bottom: Tabs (Active Orders / Wallet) (30%) */}
-                    <div className="h-[30%] bg-dark-card border border-border rounded flex flex-col overflow-hidden">
-                        <div className="flex border-b border-border">
+                    <div className={styles.tabsSection}>
+                        <div className={styles.tabsHeader}>
                             <button
                                 className={clsx(
-                                    "px-4 py-2 text-sm font-bold transition-colors",
-                                    tab === 'ORDERS'
-                                        ? 'text-primary border-b-2 border-primary'
-                                        : 'text-dark-muted hover:text-foreground'
+                                    styles.tabButton,
+                                    tab === 'ORDERS' && styles.tabButtonActive
                                 )}
                                 onClick={() => setTab('ORDERS')}
                             >
@@ -285,17 +284,15 @@ const Dashboard: React.FC = () => {
                             </button>
                             <button
                                 className={clsx(
-                                    "px-4 py-2 text-sm font-bold transition-colors",
-                                    tab === 'WALLET'
-                                        ? 'text-primary border-b-2 border-primary'
-                                        : 'text-dark-muted hover:text-foreground'
+                                    styles.tabButton,
+                                    tab === 'WALLET' && styles.tabButtonActive
                                 )}
                                 onClick={() => setTab('WALLET')}
                             >
                                 Wallet
                             </button>
                         </div>
-                        <div className="flex-1 p-0 overflow-hidden">
+                        <div className={styles.tabContent}>
                             {tab === 'ORDERS' ? (
                                 <ActiveOrders orders={orders} />
                             ) : (
@@ -306,14 +303,14 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Right Column - Order Book & Form (3 col) */}
-                <div className="col-span-3 flex flex-col gap-2 h-full">
+                <div className={styles.rightColumn}>
                     {/* Order Book (60%) */}
-                    <div className="h-[60%] bg-dark-card border border-border rounded overflow-hidden">
+                    <div className={styles.orderBookSection}>
                         <OrderBook bids={bids} asks={asks} symbol={symbol} onPriceClick={(p) => console.log(p)} />
                     </div>
 
                     {/* Order Form (40%) */}
-                    <div className="h-[40%] bg-dark-card border border-border rounded overflow-hidden">
+                    <div className={styles.orderFormSection}>
                         <OrderForm
                             symbol={symbol}
                             baseBalance={btcBalance}
