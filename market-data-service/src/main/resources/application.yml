@@ -37,7 +37,7 @@ tradeflow:
       rate-limit-delay-ms: 15000
     cache:
       ticker-ttl-seconds: 10
-    refresh-interval-ms: 30000
+    refresh-interval-ms: 15000
 
 # WebSocket Configuration
 websocket:
