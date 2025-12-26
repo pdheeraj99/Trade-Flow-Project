@@ -124,7 +124,9 @@ const Dashboard: React.FC = () => {
             const userBalances = await walletApi.getBalance(user.id.toString());
             setBalances(userBalances);
 
-            const userOrders = await ordersApi.getUserOrders(user.id);
+            // Fixed: getUserOrders no longer takes userId parameter
+            // Backend extracts userId from X-User-Id header automatically
+            const userOrders = await ordersApi.getUserOrders();
             setOrders(userOrders);
         } catch (error) {
             console.error('Failed to fetch user data', error);
@@ -173,8 +175,9 @@ const Dashboard: React.FC = () => {
         }
 
         try {
+            // Fixed: Removed userId from request body
+            // Backend extracts userId from X-User-Id header (added by client interceptor)
             await ordersApi.createOrder({
-                userId: user.id,
                 symbol,
                 side,
                 type,

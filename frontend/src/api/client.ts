@@ -10,13 +10,28 @@ const client = axios.create({
     },
 });
 
-// Request interceptor to add JWT token
+// Request interceptor to add JWT token and User ID header
 client.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
+        const user = localStorage.getItem('user');
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Add X-User-Id header for backend services (required by OMS, Wallet, etc.)
+        if (user) {
+            try {
+                const userData = JSON.parse(user);
+                if (userData.id) {
+                    config.headers['X-User-Id'] = userData.id;
+                }
+            } catch (e) {
+                console.error('Failed to parse user data from localStorage', e);
+            }
+        }
+
         return config;
     },
     (error) => Promise.reject(error)
