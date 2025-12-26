@@ -119,14 +119,21 @@ public class MarketDataService {
     }
 
     /**
-     * Scheduled task to refresh tickers
+     * Scheduled task to refresh tickers.
+     * Rate limited to avoid CoinGecko 429 errors.
      */
-    @Scheduled(fixedDelayString = "${tradeflow.market-data.refresh-interval-ms:30000}")
+    @Scheduled(fixedDelayString = "${tradeflow.market-data.refresh-interval-ms:60000}")
     public void refreshTickers() {
         log.debug("Refreshing tickers...");
         for (String symbol : TradingPairs.SUPPORTED_PAIRS) {
             try {
                 fetchAndCacheTicker(symbol);
+                // Rate limit: wait 5 seconds between API calls to avoid 429
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Ticker refresh interrupted");
+                break;
             } catch (Exception e) {
                 log.error("Error refreshing ticker for {}", symbol, e);
             }
