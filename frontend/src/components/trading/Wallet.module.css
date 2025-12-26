@@ -1,8 +1,8 @@
 /* Container */
 .container {
-    background-color: var(--bg-card);
+    background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: var(--card-radius);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -15,22 +15,18 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: rgba(11, 14, 17, 0.5);
-    /* bg-dark-bg/50 */
+    background-color: var(--bg-surface);
 }
 
 .title {
     font-weight: 700;
     font-size: 0.875rem;
-    /* text-sm */
     color: var(--text-primary);
 }
 
 .faucetBtn {
     font-size: 0.75rem;
-    /* text-xs */
-    background-color: rgba(252, 213, 53, 0.2);
-    /* primary/20 */
+    background-color: var(--badge-open-bg);
     color: var(--text-accent);
     padding: 4px 8px;
     border-radius: 4px;
@@ -56,7 +52,6 @@
 .table {
     width: 100%;
     font-size: 0.75rem;
-    /* text-xs */
     text-align: left;
     border-collapse: collapse;
 }
@@ -81,13 +76,12 @@
 /* Rows */
 .row {
     color: var(--text-primary);
-    border-bottom: 1px solid rgba(43, 49, 57, 0.5);
-    /* divide color */
+    border-bottom: 1px solid var(--border-color);
     transition: background-color 0.15s;
 }
 
 .row:hover {
-    background-color: rgba(11, 14, 17, 0.3);
+    background-color: var(--bg-hover);
 }
 
 .cell {

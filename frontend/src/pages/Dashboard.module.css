@@ -221,14 +221,7 @@
     animation: pulse 1s infinite;
 }
 
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: .5;
-    }
-}
+/* Animation pulse is defined in index.css or Navbar, 
+   but strictly speaking it's not in index.css yet, only flash. 
+   On second thought, I should add 'pulse' to index.css to be safe globally. 
+   Checking index.css... it didn't have pulse. I should add it there and remove it here. */

@@ -15,7 +15,6 @@
 .table {
     width: 100%;
     font-size: 0.75rem;
-    /* text-xs */
     text-align: left;
     border-collapse: collapse;
 }
@@ -48,8 +47,7 @@
 
 /* Rows */
 .row {
-    border-bottom: 1px solid rgba(43, 49, 57, 0.3);
-    /* border-dark-border/30 */
+    border-bottom: 1px solid var(--border-color);
     transition: background-color 0.15s;
 }
 
@@ -117,17 +115,17 @@
 }
 
 .statusOpen {
-    background-color: rgba(252, 213, 53, 0.2);
+    background-color: var(--badge-open-bg);
     color: var(--text-accent);
 }
 
 .statusFilled {
-    background-color: rgba(14, 203, 129, 0.2);
+    background-color: var(--badge-filled-bg);
     color: var(--trade-buy);
 }
 
 .statusCancelled {
-    background-color: rgba(246, 70, 93, 0.2);
+    background-color: var(--badge-cancel-bg);
     color: var(--trade-sell);
 }
 
@@ -146,8 +144,7 @@
 }
 
 .cancelBtn:hover {
-    background-color: rgba(246, 70, 93, 0.2);
-    /* trade-sell/20 */
+    background-color: var(--badge-cancel-bg);
     color: var(--trade-sell);
 }
 

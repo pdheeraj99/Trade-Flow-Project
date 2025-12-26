@@ -42,8 +42,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     font-size: 0.75rem;
-    /* text-xs */
-    padding: 1px 0;
+    padding: 2px 0;
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
@@ -60,25 +59,7 @@
     animation: flashDown 500ms ease-out;
 }
 
-@keyframes flashUp {
-    0% {
-        background-color: var(--trade-buy-bg);
-    }
-
-    100% {
-        background-color: transparent;
-    }
-}
-
-@keyframes flashDown {
-    0% {
-        background-color: var(--trade-sell-bg);
-    }
-
-    100% {
-        background-color: transparent;
-    }
-}
+/* Animations defined globally in index.css */
 
 /* Depth Bars */
 .depthBar {
@@ -136,8 +117,7 @@
     padding: 6px var(--space-2);
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
-    background-color: rgba(11, 14, 17, 0.5);
-    /* bg-dark-bg/50 */
+    background-color: var(--bg-surface);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -145,14 +125,13 @@
 
 .spreadPrice {
     font-size: 1.125rem;
-    /* text-lg */
     font-family: var(--font-mono);
     font-weight: 700;
     color: var(--text-primary);
 }
 
 .spreadDetails {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-secondary);
 }
 

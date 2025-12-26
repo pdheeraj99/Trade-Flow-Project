@@ -1,7 +1,6 @@
 /* Navbar Container */
 .navbar {
     height: var(--nav-height);
-    /* 60px defined in index.css */
     width: 100%;
     position: sticky;
     top: 0;
@@ -10,10 +9,11 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 var(--space-4);
-    background: rgba(24, 26, 32, 0.85);
+    background: var(--bg-overlay);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(43, 49, 57, 0.6);
+    box-shadow: var(--shadow-sm);
 }
 
 /* Left Section */
@@ -26,7 +26,6 @@
 /* Logo */
 .logo {
     font-size: 1.25rem;
-    /* text-xl */
     font-weight: 700;
     color: var(--text-accent);
     display: flex;
@@ -67,7 +66,6 @@
     display: flex;
     gap: var(--space-6);
     font-size: 0.875rem;
-    /* text-sm */
     font-weight: 500;
 }
 
@@ -125,7 +123,6 @@
 
 .statusText {
     font-size: 0.75rem;
-    /* text-xs */
     color: var(--text-secondary);
     display: none;
 }

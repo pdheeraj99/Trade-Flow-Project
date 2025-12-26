@@ -21,7 +21,7 @@ const TradingChart: React.FC<TradingChartProps> = ({ data, symbol }) => {
 
         const chart = createChart(chartContainerRef.current, {
             layout: {
-                background: { type: ColorType.Solid, color: '#181A20' }, // var(--bg-card)
+                background: { type: ColorType.Solid, color: '#1E2329' }, // var(--bg-surface)
                 textColor: '#EAECEF', // var(--text-primary)
             },
             grid: {
@@ -41,7 +41,7 @@ const TradingChart: React.FC<TradingChartProps> = ({ data, symbol }) => {
             crosshair: {
                 mode: 0, // Normal mode
                 vertLine: {
-                    color: '#FCD535', // var(--text-accent) - Updated from F0B90B
+                    color: '#FCD535', // var(--text-accent)
                     labelBackgroundColor: '#FCD535',
                 },
                 horzLine: {
@@ -52,12 +52,12 @@ const TradingChart: React.FC<TradingChartProps> = ({ data, symbol }) => {
         });
 
         const candlestickSeries = (chart as any).addCandlestickSeries({
-            upColor: '#0ECB81', // var(--trade-buy) - Updated
-            downColor: '#F6465D', // var(--trade-sell) - Updated
-            borderUpColor: '#0ECB81',
-            borderDownColor: '#F6465D',
-            wickUpColor: '#0ECB81',
-            wickDownColor: '#F6465D',
+            upColor: '#0ecb81', // var(--trade-buy)
+            downColor: '#f6465d', // var(--trade-sell)
+            borderUpColor: '#0ecb81',
+            borderDownColor: '#f6465d',
+            wickUpColor: '#0ecb81',
+            wickDownColor: '#f6465d',
         });
 
         chartRef.current = chart;
