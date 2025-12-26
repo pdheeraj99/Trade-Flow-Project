@@ -41,8 +41,14 @@ const Register: React.FC = () => {
                 firstName: firstName || undefined,
                 lastName: lastName || undefined
             });
-            // Auto-login after registration
-            login(response.accessToken, response.refreshToken, response.user);
+            // Auto-login after registration - build user from response fields
+            const user = {
+                id: response.userId,
+                email: response.email,
+                username: response.username,
+                role: response.roles?.[0] || 'USER'
+            };
+            login(response.accessToken, response.refreshToken, user);
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed. Please try again.');

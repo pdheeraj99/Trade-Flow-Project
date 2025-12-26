@@ -10,7 +10,18 @@ export interface User {
 export interface AuthResponse {
     accessToken: string;
     refreshToken: string;
-    user: User;
+    userId: string;
+    username: string;
+    email: string;
+    roles: string[];
+    accessTokenExpiresIn: number;
+    refreshTokenExpiresIn: number;
+    tokenType: string;
+}
+
+export interface LoginRequest {
+    usernameOrEmail: string;
+    password: string;
 }
 
 export interface RegisterRequest {
@@ -21,16 +32,23 @@ export interface RegisterRequest {
     lastName?: string;
 }
 
+export interface RefreshTokenRequest {
+    refreshToken: string;
+}
+
 export const authApi = {
-    login: async (usernameOrEmail: string, password: string): Promise<AuthResponse> => {
-        // Backend expects 'usernameOrEmail' field, not 'email'
-        const response = await client.post<AuthResponse>('/auth/login', { usernameOrEmail, password });
+    login: async (request: LoginRequest): Promise<AuthResponse> => {
+        const response = await client.post<AuthResponse>('/auth/login', request);
         return response.data;
     },
 
     register: async (request: RegisterRequest): Promise<AuthResponse> => {
-        // Backend expects username, email, password, firstName, lastName
         const response = await client.post<AuthResponse>('/auth/register', request);
+        return response.data;
+    },
+
+    refreshToken: async (request: RefreshTokenRequest): Promise<AuthResponse> => {
+        const response = await client.post<AuthResponse>('/auth/refresh', request);
         return response.data;
     },
 

@@ -18,8 +18,15 @@ const Login: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const response = await authApi.login(email, password);
-            login(response.accessToken, response.refreshToken, response.user);
+            const response = await authApi.login({ usernameOrEmail: email, password });
+            // Build user object from response fields
+            const user = {
+                id: response.userId,
+                email: response.email,
+                username: response.username,
+                role: response.roles?.[0] || 'USER'
+            };
+            login(response.accessToken, response.refreshToken, user);
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
