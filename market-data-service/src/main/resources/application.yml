@@ -34,7 +34,7 @@ tradeflow:
     coin-gecko:
       base-url: https://api.coingecko.com/api/v3
       api-key: ${COINGECKO_API_KEY:}
-      rate-limit-delay-ms: 1500
+      rate-limit-delay-ms: 15000
     cache:
       ticker-ttl-seconds: 10
     refresh-interval-ms: 30000
