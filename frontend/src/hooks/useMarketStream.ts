@@ -37,6 +37,7 @@ interface UseMarketStreamReturn {
     disconnect: () => void;
 }
 
+// WebSocket URL must match backend registration at /ws/market
 const GATEWAY_WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws/market';
 const RECONNECT_DELAY = 5000;
 const MAX_RECONNECT_ATTEMPTS = 10;

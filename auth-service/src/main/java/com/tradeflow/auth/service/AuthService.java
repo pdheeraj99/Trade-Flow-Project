@@ -32,180 +32,184 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
+        private final UserRepository userRepository;
+        private final RoleRepository roleRepository;
+        private final RefreshTokenRepository refreshTokenRepository;
+        private final PasswordEncoder passwordEncoder;
+        private final JwtService jwtService;
+        private final AuthenticationManager authenticationManager;
+        private final com.tradeflow.auth.event.UserEventPublisher userEventPublisher;
 
-    /**
-     * Register a new user
-     */
-    @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        log.info("Registering new user: {}", request.getUsername());
+        /**
+         * Register a new user
+         */
+        @Transactional
+        public AuthResponse register(RegisterRequest request) {
+                log.info("Registering new user: {}", request.getUsername());
 
-        // Check if username exists
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new UserAlreadyExistsException("username", request.getUsername());
+                // Check if username exists
+                if (userRepository.existsByUsername(request.getUsername())) {
+                        throw new UserAlreadyExistsException("username", request.getUsername());
+                }
+
+                // Check if email exists
+                if (userRepository.existsByEmail(request.getEmail())) {
+                        throw new UserAlreadyExistsException("email", request.getEmail());
+                }
+
+                // Get or create USER role
+                Role userRole = roleRepository.findByName(Role.USER)
+                                .orElseGet(() -> roleRepository.save(Role.builder()
+                                                .name(Role.USER)
+                                                .description("Standard user role")
+                                                .build()));
+
+                // Create user
+                User user = User.builder()
+                                .username(request.getUsername())
+                                .email(request.getEmail())
+                                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                                .firstName(request.getFirstName())
+                                .lastName(request.getLastName())
+                                .enabled(true)
+                                .accountNonLocked(true)
+                                .build();
+                user.addRole(userRole);
+                user = userRepository.save(user);
+
+                log.info("User registered successfully: {} (ID: {})", user.getUsername(), user.getUserId());
+
+                // Publish event for wallet-service to auto-create wallet
+                userEventPublisher.publishUserCreated(user.getUserId(), user.getUsername(), user.getEmail());
+
+                // Generate tokens
+                return generateAuthResponse(user);
         }
 
-        // Check if email exists
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new UserAlreadyExistsException("email", request.getEmail());
+        /**
+         * Authenticate user and return tokens
+         */
+        @Transactional
+        public AuthResponse login(LoginRequest request) {
+                log.info("Login attempt for: {}", request.getUsernameOrEmail());
+
+                // Authenticate using Spring Security
+                Authentication authentication = authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(
+                                                request.getUsernameOrEmail(),
+                                                request.getPassword()));
+
+                // Get user from database
+                User user = userRepository.findByUsernameOrEmail(request.getUsernameOrEmail())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Update last login
+                user.setLastLoginAt(Instant.now());
+                userRepository.save(user);
+
+                log.info("User logged in successfully: {}", user.getUsername());
+
+                // Generate tokens
+                return generateAuthResponse(user);
         }
 
-        // Get or create USER role
-        Role userRole = roleRepository.findByName(Role.USER)
-                .orElseGet(() -> roleRepository.save(Role.builder()
-                        .name(Role.USER)
-                        .description("Standard user role")
-                        .build()));
+        /**
+         * Refresh access token using refresh token
+         */
+        @Transactional
+        public AuthResponse refreshToken(RefreshTokenRequest request) {
+                log.debug("Refreshing token");
 
-        // Create user
-        User user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .enabled(true)
-                .accountNonLocked(true)
-                .build();
-        user.addRole(userRole);
-        user = userRepository.save(user);
+                // Find and validate refresh token
+                RefreshToken refreshToken = refreshTokenRepository
+                                .findValidToken(request.getRefreshToken(), Instant.now())
+                                .orElseThrow(() -> new InvalidRefreshTokenException());
 
-        log.info("User registered successfully: {} (ID: {})", user.getUsername(), user.getUserId());
+                User user = refreshToken.getUser();
 
-        // Generate tokens
-        return generateAuthResponse(user);
-    }
+                // Revoke old refresh token (rotation)
+                refreshToken.setRevoked(true);
+                refreshTokenRepository.save(refreshToken);
 
-    /**
-     * Authenticate user and return tokens
-     */
-    @Transactional
-    public AuthResponse login(LoginRequest request) {
-        log.info("Login attempt for: {}", request.getUsernameOrEmail());
+                log.info("Token refreshed for user: {}", user.getUsername());
 
-        // Authenticate using Spring Security
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsernameOrEmail(),
-                        request.getPassword()));
+                // Generate new tokens
+                return generateAuthResponse(user);
+        }
 
-        // Get user from database
-        User user = userRepository.findByUsernameOrEmail(request.getUsernameOrEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        /**
+         * Logout - revoke all refresh tokens for user
+         */
+        @Transactional
+        public void logout(UUID userId) {
+                log.info("Logging out user: {}", userId);
 
-        // Update last login
-        user.setLastLoginAt(Instant.now());
-        userRepository.save(user);
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        log.info("User logged in successfully: {}", user.getUsername());
+                int revokedCount = refreshTokenRepository.revokeAllUserTokens(user);
+                log.info("Revoked {} refresh tokens for user {}", revokedCount, userId);
+        }
 
-        // Generate tokens
-        return generateAuthResponse(user);
-    }
+        /**
+         * Generate auth response with new tokens
+         */
+        private AuthResponse generateAuthResponse(User user) {
+                // Create UserDetails for token generation
+                UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
+                                .username(user.getUsername())
+                                .password(user.getPasswordHash())
+                                .authorities(user.getRoles().stream()
+                                                .map(role -> "ROLE_" + role.getName())
+                                                .toArray(String[]::new))
+                                .build();
 
-    /**
-     * Refresh access token using refresh token
-     */
-    @Transactional
-    public AuthResponse refreshToken(RefreshTokenRequest request) {
-        log.debug("Refreshing token");
+                // Generate JWT tokens
+                String accessToken = jwtService.generateAccessToken(userDetails, user.getUserId());
+                String refreshTokenString = jwtService.generateRefreshToken(userDetails, user.getUserId());
 
-        // Find and validate refresh token
-        RefreshToken refreshToken = refreshTokenRepository
-                .findValidToken(request.getRefreshToken(), Instant.now())
-                .orElseThrow(() -> new InvalidRefreshTokenException());
+                // Store refresh token in database
+                RefreshToken refreshToken = RefreshToken.builder()
+                                .token(refreshTokenString)
+                                .user(user)
+                                .expiresAt(Instant.now().plusMillis(jwtService.getRefreshTokenExpiration()))
+                                .revoked(false)
+                                .build();
+                refreshTokenRepository.save(refreshToken);
 
-        User user = refreshToken.getUser();
+                return AuthResponse.builder()
+                                .userId(user.getUserId())
+                                .username(user.getUsername())
+                                .email(user.getEmail())
+                                .roles(user.getRoles().stream()
+                                                .map(Role::getName)
+                                                .collect(Collectors.toList()))
+                                .accessToken(accessToken)
+                                .refreshToken(refreshTokenString)
+                                .accessTokenExpiresIn(jwtService.getAccessTokenExpiration())
+                                .refreshTokenExpiresIn(jwtService.getRefreshTokenExpiration())
+                                .tokenType("Bearer")
+                                .build();
+        }
 
-        // Revoke old refresh token (rotation)
-        refreshToken.setRevoked(true);
-        refreshTokenRepository.save(refreshToken);
+        /**
+         * Get user profile by ID
+         */
+        @Transactional(readOnly = true)
+        public UserResponse getUserProfile(UUID userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        log.info("Token refreshed for user: {}", user.getUsername());
-
-        // Generate new tokens
-        return generateAuthResponse(user);
-    }
-
-    /**
-     * Logout - revoke all refresh tokens for user
-     */
-    @Transactional
-    public void logout(UUID userId) {
-        log.info("Logging out user: {}", userId);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        int revokedCount = refreshTokenRepository.revokeAllUserTokens(user);
-        log.info("Revoked {} refresh tokens for user {}", revokedCount, userId);
-    }
-
-    /**
-     * Generate auth response with new tokens
-     */
-    private AuthResponse generateAuthResponse(User user) {
-        // Create UserDetails for token generation
-        UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPasswordHash())
-                .authorities(user.getRoles().stream()
-                        .map(role -> "ROLE_" + role.getName())
-                        .toArray(String[]::new))
-                .build();
-
-        // Generate JWT tokens
-        String accessToken = jwtService.generateAccessToken(userDetails, user.getUserId());
-        String refreshTokenString = jwtService.generateRefreshToken(userDetails, user.getUserId());
-
-        // Store refresh token in database
-        RefreshToken refreshToken = RefreshToken.builder()
-                .token(refreshTokenString)
-                .user(user)
-                .expiresAt(Instant.now().plusMillis(jwtService.getRefreshTokenExpiration()))
-                .revoked(false)
-                .build();
-        refreshTokenRepository.save(refreshToken);
-
-        return AuthResponse.builder()
-                .userId(user.getUserId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .roles(user.getRoles().stream()
-                        .map(Role::getName)
-                        .collect(Collectors.toList()))
-                .accessToken(accessToken)
-                .refreshToken(refreshTokenString)
-                .accessTokenExpiresIn(jwtService.getAccessTokenExpiration())
-                .refreshTokenExpiresIn(jwtService.getRefreshTokenExpiration())
-                .tokenType("Bearer")
-                .build();
-    }
-
-    /**
-     * Get user profile by ID
-     */
-    @Transactional(readOnly = true)
-    public UserResponse getUserProfile(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return UserResponse.builder()
-                .userId(user.getUserId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .roles(user.getRoles().stream()
-                        .map(Role::getName)
-                        .collect(Collectors.toList()))
-                .enabled(user.isEnabled())
-                .build();
-    }
+                return UserResponse.builder()
+                                .userId(user.getUserId())
+                                .username(user.getUsername())
+                                .email(user.getEmail())
+                                .firstName(user.getFirstName())
+                                .lastName(user.getLastName())
+                                .roles(user.getRoles().stream()
+                                                .map(Role::getName)
+                                                .collect(Collectors.toList()))
+                                .enabled(user.isEnabled())
+                                .build();
+        }
 }

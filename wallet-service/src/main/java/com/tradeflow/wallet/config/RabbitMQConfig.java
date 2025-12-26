@@ -68,9 +68,30 @@ public class RabbitMQConfig {
         return new DirectExchange(RabbitMQConstants.ORDER_EXCHANGE, true, false);
     }
 
+    @Bean
+    public DirectExchange userExchange() {
+        return new DirectExchange(RabbitMQConstants.USER_EXCHANGE, true, false);
+    }
+
     // ============================================
     // Queue Declarations
     // ============================================
+
+    /**
+     * CRITICAL: Queue for user created events from auth-service.
+     * This bean ensures the queue exists before the listener tries to connect.
+     */
+    @Bean
+    public Queue userCreatedQueue() {
+        return QueueBuilder.durable(RabbitMQConstants.USER_CREATED_QUEUE).build();
+    }
+
+    @Bean
+    public Binding userCreatedBinding() {
+        return BindingBuilder.bind(userCreatedQueue())
+                .to(userExchange())
+                .with(RabbitMQConstants.ROUTING_USER_CREATED);
+    }
 
     @Bean
     public Queue reserveQueue() {

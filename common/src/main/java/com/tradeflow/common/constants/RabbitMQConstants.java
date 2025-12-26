@@ -28,4 +28,9 @@ public final class RabbitMQConstants {
     // Dead Letter
     public static final String DLX_EXCHANGE = "tradeflow.dlx.exchange";
     public static final String DLQ_QUEUE = "tradeflow.dlq.queue";
+
+    // User Events (Auth -> Wallet)
+    public static final String USER_EXCHANGE = "tradeflow.user.exchange";
+    public static final String USER_CREATED_QUEUE = "user.created.queue";
+    public static final String ROUTING_USER_CREATED = "user.created";
 }

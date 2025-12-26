@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
+import { useAuth } from '../context/AuthContext';
 
 const Register: React.FC = () => {
-    const [fullName, setFullName] = useState('');
+    const [username, setUsername] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -21,12 +25,25 @@ const Register: React.FC = () => {
             return;
         }
 
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            await authApi.register(email, password, fullName);
-            // Optional: Auto-login here, but for now redirect to login
-            navigate('/login');
+            // Updated to use new register API signature
+            const response = await authApi.register({
+                username,
+                email,
+                password,
+                firstName: firstName || undefined,
+                lastName: lastName || undefined
+            });
+            // Auto-login after registration
+            login(response.accessToken, response.refreshToken, response.user);
+            navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
@@ -47,19 +64,44 @@ const Register: React.FC = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Full Name</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Username *</label>
                         <input
                             type="text"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
                             className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
-                            placeholder="John Doe"
+                            placeholder="johndoe"
                             required
+                            minLength={3}
+                            maxLength={50}
                         />
                     </div>
 
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">First Name</label>
+                            <input
+                                type="text"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                                placeholder="John"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-muted-foreground mb-1">Last Name</label>
+                            <input
+                                type="text"
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                                placeholder="Doe"
+                            />
+                        </div>
+                    </div>
+
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Email</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Email *</label>
                         <input
                             type="email"
                             value={email}
@@ -71,7 +113,7 @@ const Register: React.FC = () => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Password</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Password *</label>
                         <input
                             type="password"
                             value={password}
@@ -79,11 +121,12 @@ const Register: React.FC = () => {
                             className="w-full bg-input border border-border rounded p-2 text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                             placeholder="••••••••"
                             required
+                            minLength={8}
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Confirm Password</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Confirm Password *</label>
                         <input
                             type="password"
                             value={confirmPassword}

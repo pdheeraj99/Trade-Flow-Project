@@ -7,7 +7,7 @@ class WebSocketService {
 
     constructor() {
         this.client = new Client({
-            brokerURL: 'ws://localhost:8080/ws', // Gateway WebSocket endpoint
+            brokerURL: 'ws://localhost:8080/ws/market', // Gateway WebSocket endpoint (must match backend /ws/market)
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,

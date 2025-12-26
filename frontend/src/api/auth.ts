@@ -1,8 +1,9 @@
 import client from './client';
 
 export interface User {
-    id: number;
+    id: string;  // UUID from backend
     email: string;
+    username: string;
     role: string;
 }
 
@@ -12,14 +13,24 @@ export interface AuthResponse {
     user: User;
 }
 
+export interface RegisterRequest {
+    username: string;
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+}
+
 export const authApi = {
-    login: async (email: string, password: string): Promise<AuthResponse> => {
-        const response = await client.post<AuthResponse>('/auth/login', { email, password });
+    login: async (usernameOrEmail: string, password: string): Promise<AuthResponse> => {
+        // Backend expects 'usernameOrEmail' field, not 'email'
+        const response = await client.post<AuthResponse>('/auth/login', { usernameOrEmail, password });
         return response.data;
     },
 
-    register: async (email: string, password: string, fullName: string): Promise<User> => {
-        const response = await client.post<User>('/auth/register', { email, password, fullName });
+    register: async (request: RegisterRequest): Promise<AuthResponse> => {
+        // Backend expects username, email, password, firstName, lastName
+        const response = await client.post<AuthResponse>('/auth/register', request);
         return response.data;
     },
 

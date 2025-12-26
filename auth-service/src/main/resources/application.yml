@@ -52,6 +52,13 @@ management:
 spring.zipkin:
   base-url: http://localhost:9411
 
+# RabbitMQ Configuration (User Created Events)
+spring.rabbitmq:
+  host: localhost
+  port: 5672
+  username: tradeflow
+  password: tradeflow_secret
+
 logging:
   level:
     com.tradeflow: DEBUG

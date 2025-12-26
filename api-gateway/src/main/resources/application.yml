@@ -46,13 +46,15 @@ spring:
         - id: market-data-websocket
           uri: ws://localhost:8085
           predicates:
-            - Path=/ws/**
+            - Path=/ws/market/**
 
-      # CORS Configuration
+      # CORS Configuration - Allow frontend with credentials for JWT
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: "*"
+            allowedOrigins:
+              - "http://localhost:5173"
+              - "http://localhost:3000"
             allowedMethods:
               - GET
               - POST
@@ -60,7 +62,9 @@ spring:
               - DELETE
               - OPTIONS
             allowedHeaders: "*"
-            allowCredentials: false
+            exposedHeaders:
+              - "Authorization"
+            allowCredentials: true
 
 # JWT Configuration
 jwt:
