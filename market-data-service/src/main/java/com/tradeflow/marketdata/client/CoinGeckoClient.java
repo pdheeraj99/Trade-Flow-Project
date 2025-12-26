@@ -96,9 +96,14 @@ public class CoinGeckoClient {
                 .baseUrl(config.getCoinGecko().getBaseUrl());
 
         // Add API key header if configured
+        // CoinGecko Demo API uses x-cg-demo-api-key header
+        // CoinGecko Pro API uses x-cg-pro-api-key header
         String apiKey = config.getCoinGecko().getApiKey();
         if (apiKey != null && !apiKey.isEmpty()) {
-            builder.defaultHeader("x-cg-pro-api-key", apiKey);
+            // Demo keys start with "CG-", Pro keys have different format
+            String headerName = apiKey.startsWith("CG-") ? "x-cg-demo-api-key" : "x-cg-pro-api-key";
+            builder.defaultHeader(headerName, apiKey);
+            log.debug("Using CoinGecko API with key type: {}", headerName);
         }
 
         return builder.build();

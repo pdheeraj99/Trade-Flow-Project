@@ -28,14 +28,16 @@ spring:
       properties:
         spring.json.trusted.packages: com.tradeflow.*
 
-# CoinGecko API Configuration
-coingecko:
-  api:
-    base-url: https://api.coingecko.com/api/v3
-    key: ${COINGECKO_API_KEY:}
-  cache:
-    ttl-seconds: 10          # Redis cache TTL
-    stale-threshold-seconds: 30  # Mark as stale after 30s
+# Market Data Service Configuration
+tradeflow:
+  market-data:
+    coin-gecko:
+      base-url: https://api.coingecko.com/api/v3
+      api-key: ${COINGECKO_API_KEY:}
+      rate-limit-delay-ms: 1500
+    cache:
+      ticker-ttl-seconds: 10
+    refresh-interval-ms: 30000
 
 # WebSocket Configuration
 websocket:
