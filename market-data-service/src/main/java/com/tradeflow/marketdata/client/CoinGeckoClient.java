@@ -110,21 +110,20 @@ public class CoinGeckoClient {
     }
 
     /**
-     * Rate limit enforcement
+     * Rate limit enforcement - Non-blocking timestamp tracking.
+     * The @Scheduled annotation in MarketDataService already controls timing.
+     * This method simply tracks the last request time for logging/monitoring.
      */
     private synchronized void rateLimitWait() {
         long now = System.currentTimeMillis();
         long elapsed = now - lastRequestTime;
-        long delay = config.getCoinGecko().getRateLimitDelayMs();
+        long configuredDelay = config.getCoinGecko().getRateLimitDelayMs();
 
-        if (elapsed < delay) {
-            try {
-                Thread.sleep(delay - elapsed);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+        if (elapsed < configuredDelay) {
+            log.debug("Rate limit: {}ms since last request (configured: {}ms)", elapsed, configuredDelay);
         }
-        lastRequestTime = System.currentTimeMillis();
+
+        lastRequestTime = now;
     }
 
     /**
