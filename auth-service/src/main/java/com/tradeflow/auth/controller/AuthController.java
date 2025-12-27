@@ -31,7 +31,7 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("Registration request for: {}", request.getUsername());
+        log.info(">>> HOT RELOAD TEST <<< Registration request for: {}", request.getUsername());
         AuthResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
