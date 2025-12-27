@@ -29,7 +29,7 @@ public class RefreshToken {
     @Column(name = "token_id", updatable = false, nullable = false)
     private UUID tokenId;
 
-    @Column(name = "token", nullable = false, unique = true, length = 255)
+    @Column(name = "token", nullable = false, unique = true, length = 512)
     private String token;
 
     @ManyToOne(fetch = FetchType.LAZY)

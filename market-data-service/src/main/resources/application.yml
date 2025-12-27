@@ -33,11 +33,11 @@ tradeflow:
   market-data:
     coin-gecko:
       base-url: https://api.coingecko.com/api/v3
-      api-key: ${COINGECKO_API_KEY:}
-      rate-limit-delay-ms: 15000
+      api-key: CG-JZVbfTVjYHf5aUk9rQqxKp4G
+      rate-limit-delay-ms: 30000
     cache:
       ticker-ttl-seconds: 10
-    refresh-interval-ms: 15000
+    refresh-interval-ms: 30000
 
 # WebSocket Configuration
 websocket:
