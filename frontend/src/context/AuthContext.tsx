@@ -25,6 +25,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(JSON.parse(storedUser));
         }
         setLoading(false);
+
+        // Listen for logout events from API interceptor
+        const handleLogoutEvent = () => {
+            setUser(null);
+            delete client.defaults.headers.Authorization;
+        };
+
+        window.addEventListener('auth:logout', handleLogoutEvent);
+
+        return () => {
+            window.removeEventListener('auth:logout', handleLogoutEvent);
+        };
     }, []);
 
     const login = (token: string, refreshToken: string, userData: User) => {

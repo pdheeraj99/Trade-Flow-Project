@@ -46,5 +46,12 @@ export const ordersApi = {
     getOpenOrders: async (): Promise<Order[]> => {
         const response = await client.get<Order[]>('/orders/open');
         return response.data;
+    },
+
+    /**
+     * Cancel an order by ID
+     */
+    cancelOrder: async (orderId: string): Promise<void> => {
+        await client.delete(`/orders/${orderId}`);
     }
 };

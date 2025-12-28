@@ -42,9 +42,15 @@ client.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Clear token and redirect to login if 401
+            // Clear local storage
             localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
+
+            // Dispatch custom event to notify AuthContext
+            window.dispatchEvent(new Event('auth:logout'));
+
+            // Redirect to login
             if (!window.location.pathname.includes('/login')) {
                 window.location.href = '/login';
             }

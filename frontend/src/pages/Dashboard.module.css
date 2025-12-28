@@ -19,7 +19,7 @@
 
 /* Columns */
 .leftColumn {
-    grid-column: span 9;
+    grid-column: span 8;
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
@@ -27,7 +27,7 @@
 }
 
 .rightColumn {
-    grid-column: span 3;
+    grid-column: span 4;
     display: flex;
     flex-direction: column;
     gap: var(--space-2);

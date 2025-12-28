@@ -4,7 +4,6 @@ import TradingChart from '../components/trading/TradingChart';
 import OrderBook from '../components/trading/OrderBook';
 import OrderForm from '../components/trading/OrderForm';
 import { marketApi } from '../api/market';
-import { webSocketService } from '../api/websocket';
 import type { CandlestickData } from 'lightweight-charts';
 import { useAuth } from '../context/AuthContext';
 import { walletApi } from '../api/wallet';
@@ -14,6 +13,7 @@ import ActiveOrders from '../components/trading/ActiveOrders';
 import { useMarketStream } from '../hooks/useMarketStream';
 import { useOrderUpdates } from '../hooks/useOrderUpdates';
 import clsx from 'clsx';
+import { toastService } from '../utils/toast';
 import styles from './Dashboard.module.css';
 
 // Initial dummy data for chart history (before backend history API is ready)
@@ -50,8 +50,6 @@ const generateInitialChartData = (): CandlestickData[] => {
 const Dashboard: React.FC = () => {
     const { user } = useAuth();
     const [chartData, setChartData] = useState<CandlestickData[]>(() => generateInitialChartData());
-    const [bids, setBids] = useState<any[]>([]);
-    const [asks, setAsks] = useState<any[]>([]);
     const [orders, setOrders] = useState<any[]>([]);
     const [balances, setBalances] = useState<any[]>([]);
     const [tab, setTab] = useState<'ORDERS' | 'WALLET'>('ORDERS');
@@ -200,25 +198,16 @@ const Dashboard: React.FC = () => {
         }
     }, [orderUpdate]);
 
-    // Subscribe to order book updates (still using the old service for now)
-    useEffect(() => {
-        webSocketService.connect();
-
-        webSocketService.subscribe(`/topic/orderbook/${symbol.toLowerCase()}`, (msg) => {
-            if (msg.bids) setBids(msg.bids);
-            if (msg.asks) setAsks(msg.asks);
-        });
-
-        return () => {
-            webSocketService.disconnect();
-        };
-    }, [symbol]);
+    // WebSocket updates are now handled by useMarketStream hook
+    // OrderBook receives bids/asks via props (TODO: migrate to dedicated hook)
 
     const handleOrderSubmit = async (side: 'BUY' | 'SELL', type: 'LIMIT' | 'MARKET', price: number, quantity: number) => {
         if (!user) {
-            alert('Please login to place orders');
+            toastService.error('Please login to place orders');
             return;
         }
+
+        const loadingToast = toastService.loading('Placing order...');
 
         try {
             // Fixed: Removed userId from request body
@@ -230,11 +219,31 @@ const Dashboard: React.FC = () => {
                 price: type === 'LIMIT' ? price : undefined,
                 quantity
             });
-            console.log('Order placed successfully');
+
+            toastService.dismiss(loadingToast);
+            toastService.order.created(symbol, side);
             setRefreshTrigger(prev => prev + 1);
-        } catch (error) {
+        } catch (error: any) {
+            toastService.dismiss(loadingToast);
+            const errorMessage = error.response?.data?.message || 'Failed to place order';
+            toastService.order.failed(errorMessage);
             console.error('Failed to place order', error);
-            alert('Failed to place order');
+        }
+    };
+
+    const handleCancelOrder = async (orderId: string) => {
+        const loadingToast = toastService.loading('Cancelling order...');
+
+        try {
+            await ordersApi.cancelOrder(orderId);
+            toastService.dismiss(loadingToast);
+            toastService.order.cancelled(orderId);
+            setRefreshTrigger(prev => prev + 1);
+        } catch (error: any) {
+            toastService.dismiss(loadingToast);
+            const errorMessage = error.response?.data?.message || 'Failed to cancel order';
+            toastService.error(errorMessage);
+            console.error('Failed to cancel order', error);
         }
     };
 
@@ -341,7 +350,7 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className={styles.tabContent}>
                             {tab === 'ORDERS' ? (
-                                <ActiveOrders orders={orders} />
+                                <ActiveOrders orders={orders} onCancelOrder={handleCancelOrder} />
                             ) : (
                                 <Wallet onRefresh={() => setRefreshTrigger(prev => prev + 1)} />
                             )}
@@ -353,7 +362,7 @@ const Dashboard: React.FC = () => {
                 <div className={styles.rightColumn}>
                     {/* Order Book (60%) */}
                     <div className={styles.orderBookSection}>
-                        <OrderBook bids={bids} asks={asks} symbol={symbol} onPriceClick={(p) => console.log(p)} />
+                        <OrderBook bids={[]} asks={[]} symbol={symbol} onPriceClick={(p) => console.log(p)} />
                     </div>
 
                     {/* Order Form (40%) */}
