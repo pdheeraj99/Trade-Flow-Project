@@ -12,6 +12,7 @@ import { ordersApi } from '../api/orders';
 import Wallet from '../components/trading/Wallet';
 import ActiveOrders from '../components/trading/ActiveOrders';
 import { useMarketStream } from '../hooks/useMarketStream';
+import { useOrderUpdates } from '../hooks/useOrderUpdates';
 import clsx from 'clsx';
 import styles from './Dashboard.module.css';
 
@@ -66,6 +67,11 @@ const Dashboard: React.FC = () => {
         isConnected,
         error: wsError
     } = useMarketStream({ symbol, autoConnect: true });
+
+    // Use order updates hook for real-time order status updates
+    const {
+        latestUpdate: orderUpdate
+    } = useOrderUpdates({ userId: user?.id.toString(), autoConnect: true });
 
     // Determine price trend (green/red)
     const priceTrend = useMemo(() => {
@@ -155,6 +161,33 @@ const Dashboard: React.FC = () => {
         }
     }, [refreshTrigger, fetchUserData]);
 
+    // Update orders in real-time when order update is received
+    useEffect(() => {
+        if (!orderUpdate) return;
+
+        setOrders(prevOrders => {
+            const index = prevOrders.findIndex(o => o.orderId === orderUpdate.orderId);
+            if (index !== -1) {
+                // Update existing order
+                const updated = [...prevOrders];
+                updated[index] = {
+                    ...updated[index],
+                    status: orderUpdate.status,
+                    filledQuantity: orderUpdate.filledQuantity
+                };
+                return updated;
+            }
+            // Order not found, trigger full refresh
+            setRefreshTrigger(prev => prev + 1);
+            return prevOrders;
+        });
+
+        // Also refresh wallet balances when order status changes
+        if (orderUpdate.status === 'FILLED' || orderUpdate.status === 'PARTIALLY_FILLED') {
+            setRefreshTrigger(prev => prev + 1);
+        }
+    }, [orderUpdate]);
+
     // Subscribe to order book updates (still using the old service for now)
     useEffect(() => {
         webSocketService.connect();
@@ -242,11 +275,11 @@ const Dashboard: React.FC = () => {
                                 <div className={styles.statItem}>
                                     <div className={styles.statLabel}>24h Change</div>
                                     <div className={clsx({
-                                        [styles.textBuy]: tickerData?.priceChangePercent?.startsWith('+') || (parseFloat(tickerData?.priceChangePercent || '0') > 0),
-                                        [styles.textSell]: tickerData?.priceChangePercent?.startsWith('-') || (parseFloat(tickerData?.priceChangePercent || '0') < 0),
-                                        [styles.textNeutral]: !tickerData?.priceChangePercent,
+                                        [styles.textBuy]: tickerData?.changePercent24h?.startsWith('+') || (parseFloat(tickerData?.changePercent24h || '0') > 0),
+                                        [styles.textSell]: tickerData?.changePercent24h?.startsWith('-') || (parseFloat(tickerData?.changePercent24h || '0') < 0),
+                                        [styles.textNeutral]: !tickerData?.changePercent24h,
                                     })}>
-                                        {tickerData?.priceChangePercent ? `${tickerData.priceChangePercent}%` : '---'}
+                                        {tickerData?.changePercent24h ? `${tickerData.changePercent24h}%` : '---'}
                                     </div>
                                 </div>
                                 <div className={styles.statItem}>
@@ -296,7 +329,7 @@ const Dashboard: React.FC = () => {
                             {tab === 'ORDERS' ? (
                                 <ActiveOrders orders={orders} />
                             ) : (
-                                <Wallet balances={balances} onRefresh={() => setRefreshTrigger(prev => prev + 1)} />
+                                <Wallet onRefresh={() => setRefreshTrigger(prev => prev + 1)} />
                             )}
                         </div>
                     </div>

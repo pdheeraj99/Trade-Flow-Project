@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -68,7 +69,7 @@ public class OrderService {
                 .status(OrderStatus.PENDING_VALIDATION)
                 .clientOrderId(request.getClientOrderId())
                 .build();
-        order = orderRepository.save(order);
+        order = orderRepository.save(Objects.requireNonNull(order, "order must not be null"));
 
         log.info("Order {} created for user {}", order.getOrderId(), userId);
 
@@ -83,10 +84,11 @@ public class OrderService {
      */
     @Transactional
     public OrderResponse cancelOrder(UUID userId, CancelOrderRequest request) {
-        log.info("User {} cancelling order {}", userId, request.getOrderId());
+        UUID orderId = Objects.requireNonNull(request.getOrderId(), "orderId must not be null");
+        log.info("User {} cancelling order {}", userId, orderId);
 
-        Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new OrderNotFoundException(request.getOrderId()));
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         // Verify ownership
         if (!order.getUserId().equals(userId)) {
@@ -99,11 +101,11 @@ public class OrderService {
 
         // Trigger cancellation through saga
         String reason = request.getReason() != null ? request.getReason() : "User requested cancellation";
-        sagaOrchestrator.cancelOrder(request.getOrderId(), reason);
+        sagaOrchestrator.cancelOrder(orderId, reason);
 
         // Refresh order state
-        order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new OrderNotFoundException(request.getOrderId()));
+        order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         return toResponse(order);
     }
@@ -113,8 +115,9 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public OrderResponse getOrder(UUID userId, UUID orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException(orderId));
+        UUID safeOrderId = Objects.requireNonNull(orderId, "orderId must not be null");
+        Order order = orderRepository.findById(safeOrderId)
+                .orElseThrow(() -> new OrderNotFoundException(safeOrderId));
 
         // Verify ownership
         if (!order.getUserId().equals(userId)) {

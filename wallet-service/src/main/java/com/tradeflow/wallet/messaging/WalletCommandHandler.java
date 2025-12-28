@@ -1,6 +1,4 @@
 package com.tradeflow.wallet.messaging;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import com.tradeflow.common.command.ReleaseFundsCommand;
 import com.tradeflow.common.command.ReserveFundsCommand;
@@ -23,6 +21,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -37,7 +36,6 @@ public class WalletCommandHandler {
     private final WalletService walletService;
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
-    private final ObjectMapper objectMapper;
 
     private static final String PROCESSED_KEY_PREFIX = "processed:saga:";
     private static final Duration IDEMPOTENCY_TTL = Duration.ofDays(1);
@@ -58,8 +56,8 @@ public class WalletCommandHandler {
                 return;
             }
 
-            // Process the command
-            walletService.reserveFunds(
+            // Process the command and get transaction ID
+            UUID transactionId = walletService.reserveFunds(
                     command.getUserId(),
                     command.getCurrency(),
                     new BigDecimal(command.getAmount()),
@@ -68,7 +66,7 @@ public class WalletCommandHandler {
             // Mark as processed
             markAsProcessed(sagaId);
 
-            // Send success event
+            // Send success event with transaction ID
             FundsReservedEvent event = FundsReservedEvent.builder()
                     .eventId(UUID.randomUUID())
                     .sagaId(command.getSagaId())
@@ -76,6 +74,7 @@ public class WalletCommandHandler {
                     .userId(command.getUserId())
                     .currency(command.getCurrency())
                     .amount(command.getAmount())
+                    .transactionId(transactionId.toString())
                     .eventTimestamp(Instant.now())
                     .build();
 
@@ -177,7 +176,7 @@ public class WalletCommandHandler {
      */
     @RabbitListener(queues = RabbitMQConstants.WALLET_SETTLE_QUEUE)
     public void handleSettleTrade(SettleTradeCommand command, Message message, Channel channel) throws IOException {
-        String sagaId = command.getSagaId().toString() + ":settle";
+        String sagaId = command.getTradeId().toString() + ":settle";
         log.info("Received SettleTradeCommand for trade {}", command.getTradeId());
 
         try {
@@ -219,6 +218,7 @@ public class WalletCommandHandler {
      */
     private void markAsProcessed(String key) {
         String redisKey = PROCESSED_KEY_PREFIX + key;
-        redisTemplate.opsForValue().set(redisKey, "1", IDEMPOTENCY_TTL);
+        redisTemplate.opsForValue().set(redisKey, "1",
+                Objects.requireNonNull(IDEMPOTENCY_TTL, "Idempotency TTL must not be null"));
     }
 }

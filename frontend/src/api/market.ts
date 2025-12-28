@@ -1,11 +1,17 @@
 import client from './client';
 
+// Matches backend TickerResponse.java exactly
 export interface Ticker {
     symbol: string;
+    coinId: string;
     price: string;
-    price24h: string | null;
+    change24h: string | null;        // Backend field name (was price24h)
+    changePercent24h: string | null;
+    high24h: string | null;
+    low24h: string | null;
     volume24h: string | null;
     timestamp: string;
+    stale: boolean;
 }
 
 export const marketApi = {

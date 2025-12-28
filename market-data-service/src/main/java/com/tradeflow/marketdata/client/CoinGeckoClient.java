@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * CoinGecko API client for fetching real cryptocurrency market data.
@@ -92,8 +93,8 @@ public class CoinGeckoClient {
      * Build REST client with configuration
      */
     private RestClient buildClient() {
-        RestClient.Builder builder = restClientBuilder
-                .baseUrl(config.getCoinGecko().getBaseUrl());
+        String baseUrl = Objects.requireNonNull(config.getCoinGecko().getBaseUrl(), "CoinGecko baseUrl must not be null");
+        RestClient.Builder builder = restClientBuilder.baseUrl(baseUrl);
 
         // Add API key header if configured
         // CoinGecko Demo API uses x-cg-demo-api-key header

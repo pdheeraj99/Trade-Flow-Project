@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Mono;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
 /**
  * Rate limiting configuration using Redis
  */
@@ -24,10 +27,14 @@ public class RateLimiterConfig {
             }
 
             // Fall back to IP address
-            String ip = exchange.getRequest().getRemoteAddress() != null
-                    ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
-                    : "anonymous";
-            return Mono.just(ip);
+            InetSocketAddress remoteAddress = exchange.getRequest().getRemoteAddress();
+            if (remoteAddress == null) {
+                return Mono.just("anonymous");
+            }
+
+            InetAddress address = remoteAddress.getAddress();
+            String ip = address != null ? address.getHostAddress() : null;
+            return Mono.just(ip != null ? ip : "anonymous");
         };
     }
 }

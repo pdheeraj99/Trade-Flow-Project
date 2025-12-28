@@ -9,6 +9,8 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Objects;
+
 /**
  * RabbitMQ configuration for Auth Service.
  * Publishes UserCreatedEvent to wallet-service.
@@ -23,8 +25,10 @@ public class RabbitMQConfig {
 
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
-        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        rabbitTemplate.setMessageConverter(jsonMessageConverter());
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(
+                Objects.requireNonNull(connectionFactory, "connectionFactory must not be null"));
+        rabbitTemplate.setMessageConverter(
+                Objects.requireNonNull(jsonMessageConverter(), "messageConverter must not be null"));
         return rabbitTemplate;
     }
 

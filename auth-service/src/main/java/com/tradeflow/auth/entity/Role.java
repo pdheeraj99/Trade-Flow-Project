@@ -2,6 +2,7 @@ package com.tradeflow.auth.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.lang.NonNull;
 
 import java.util.UUID;
 
@@ -27,6 +28,7 @@ public class Role {
     private UUID roleId;
 
     @Column(name = "name", nullable = false, unique = true, length = 50)
+    @NonNull
     private String name;
 
     @Column(name = "description", length = 255)

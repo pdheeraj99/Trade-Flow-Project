@@ -14,13 +14,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -58,11 +58,13 @@ public class AuthService {
                 }
 
                 // Get or create USER role
-                Role userRole = roleRepository.findByName(Role.USER)
-                                .orElseGet(() -> roleRepository.save(Role.builder()
-                                                .name(Role.USER)
-                                                .description("Standard user role")
-                                                .build()));
+                Role userRole = Objects.requireNonNull(
+                                roleRepository.findByName(Role.USER)
+                                                .orElseGet(() -> roleRepository.save(Role.builder()
+                                                                .name(Role.USER)
+                                                                .description("Standard user role")
+                                                                .build())),
+                                "USER role must not be null");
 
                 // Create user
                 User user = User.builder()
@@ -94,7 +96,7 @@ public class AuthService {
                 log.info("Login attempt for: {}", request.getUsernameOrEmail());
 
                 // Authenticate using Spring Security
-                Authentication authentication = authenticationManager.authenticate(
+                authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(
                                                 request.getUsernameOrEmail(),
                                                 request.getPassword()));
@@ -142,6 +144,7 @@ public class AuthService {
          */
         @Transactional
         public void logout(UUID userId) {
+                Objects.requireNonNull(userId, "userId must not be null");
                 log.info("Logging out user: {}", userId);
 
                 User user = userRepository.findById(userId)
@@ -169,12 +172,12 @@ public class AuthService {
                 String refreshTokenString = jwtService.generateRefreshToken(userDetails, user.getUserId());
 
                 // Store refresh token in database
-                RefreshToken refreshToken = RefreshToken.builder()
+                RefreshToken refreshToken = Objects.requireNonNull(RefreshToken.builder()
                                 .token(refreshTokenString)
                                 .user(user)
                                 .expiresAt(Instant.now().plusMillis(jwtService.getRefreshTokenExpiration()))
                                 .revoked(false)
-                                .build();
+                                .build(), "refreshToken must not be null");
                 refreshTokenRepository.save(refreshToken);
 
                 return AuthResponse.builder()
@@ -197,6 +200,7 @@ public class AuthService {
          */
         @Transactional(readOnly = true)
         public UserResponse getUserProfile(UUID userId) {
+                Objects.requireNonNull(userId, "userId must not be null");
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 

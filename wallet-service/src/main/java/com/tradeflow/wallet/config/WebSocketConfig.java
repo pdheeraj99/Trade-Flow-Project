@@ -1,4 +1,4 @@
-package com.tradeflow.marketdata.config;
+package com.tradeflow.wallet.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
@@ -7,31 +7,20 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-/**
- * WebSocket configuration for real-time market data streaming.
- */
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(@NonNull MessageBrokerRegistry config) {
-        // Enable a simple in-memory message broker
         config.enableSimpleBroker("/topic");
-
-        // Set application destination prefix
         config.setApplicationDestinationPrefixes("/app");
     }
 
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
-        // Register STOMP endpoint with SockJS fallback
-        registry.addEndpoint("/ws/market")
+        registry.addEndpoint("/ws/wallet")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
-
-        // Also register without SockJS for native WebSocket clients
-        registry.addEndpoint("/ws/market")
-                .setAllowedOriginPatterns("*");
     }
 }

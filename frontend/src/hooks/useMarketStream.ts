@@ -2,15 +2,21 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import type { IMessage, StompSubscription } from '@stomp/stompjs';
 
+// Matches backend TickerResponse WebSocket broadcast format
 export interface TickerData {
     symbol: string;
+    coinId?: string;
     price: string;
-    priceChange: string;
-    priceChangePercent: string;
+    change24h: string;           // Backend field name (was priceChange)
+    changePercent24h: string;    // Backend field name (was priceChangePercent)
+    // Aliased for backward compatibility with UI components
+    priceChange?: string;
+    priceChangePercent?: string;
     high24h: string;
     low24h: string;
     volume24h: string;
     timestamp: string;
+    stale?: boolean;
 }
 
 export interface CandleData {
@@ -64,7 +70,14 @@ export const useMarketStream = (options: UseMarketStreamOptions = {}): UseMarket
             if (data.price) {
                 const priceValue = parseFloat(data.price);
                 setLatestPrice(priceValue);
-                setTickerData(data as TickerData);
+                
+                // Map backend fields to aliased fields for UI compatibility
+                const tickerWithAliases: TickerData = {
+                    ...data,
+                    priceChange: data.change24h,
+                    priceChangePercent: data.changePercent24h,
+                };
+                setTickerData(tickerWithAliases);
 
                 // Create candle from ticker (simplified - real implementation would aggregate)
                 if (data.timestamp) {

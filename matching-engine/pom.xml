@@ -27,7 +27,13 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- Kafka for Order Ingestion and Trade Events -->
+        <!-- RabbitMQ for Order Ingestion (align with OMS saga messaging) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <!-- Kafka for publishing trades/orderbook updates -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>

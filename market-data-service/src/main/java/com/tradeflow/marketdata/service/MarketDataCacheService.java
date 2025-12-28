@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -31,14 +32,19 @@ public class MarketDataCacheService {
      * Cache ticker data
      */
     public void cacheTicker(String symbol, Object tickerData) {
-        String key = TICKER_PREFIX + symbol.toUpperCase();
+        String safeSymbol = Objects.requireNonNull(symbol, "symbol must not be null");
+        String key = TICKER_PREFIX + safeSymbol.toUpperCase();
         try {
-            String json = objectMapper.writeValueAsString(tickerData);
-            redisTemplate.opsForValue().set(key, json,
-                    Duration.ofSeconds(config.getCache().getTickerTtlSeconds()));
-            log.debug("Cached ticker for {}", symbol);
+            String json = Objects.requireNonNull(
+                    objectMapper.writeValueAsString(tickerData),
+                    "Serialized ticker data must not be null");
+            Duration ttl = Objects.requireNonNull(
+                    Duration.ofSeconds(config.getCache().getTickerTtlSeconds()),
+                    "Ticker TTL must not be null");
+            redisTemplate.opsForValue().set(key, json, ttl);
+            log.debug("Cached ticker for {}", safeSymbol);
         } catch (JsonProcessingException e) {
-            log.error("Error serializing ticker data for {}", symbol, e);
+            log.error("Error serializing ticker data for {}", safeSymbol, e);
         }
     }
 
@@ -46,7 +52,8 @@ public class MarketDataCacheService {
      * Get cached ticker data
      */
     public <T> Optional<T> getCachedTicker(String symbol, Class<T> type) {
-        String key = TICKER_PREFIX + symbol.toUpperCase();
+        String safeSymbol = Objects.requireNonNull(symbol, "symbol must not be null");
+        String key = TICKER_PREFIX + safeSymbol.toUpperCase();
         String json = redisTemplate.opsForValue().get(key);
 
         if (json == null) {
@@ -56,7 +63,7 @@ public class MarketDataCacheService {
         try {
             return Optional.of(objectMapper.readValue(json, type));
         } catch (JsonProcessingException e) {
-            log.error("Error deserializing ticker data for {}", symbol, e);
+            log.error("Error deserializing ticker data for {}", safeSymbol, e);
             return Optional.empty();
         }
     }
@@ -65,14 +72,19 @@ public class MarketDataCacheService {
      * Cache market data
      */
     public void cacheMarketData(String coinId, Object marketData) {
-        String key = MARKET_PREFIX + coinId.toLowerCase();
+        String safeCoinId = Objects.requireNonNull(coinId, "coinId must not be null");
+        String key = MARKET_PREFIX + safeCoinId.toLowerCase();
         try {
-            String json = objectMapper.writeValueAsString(marketData);
-            redisTemplate.opsForValue().set(key, json,
-                    Duration.ofSeconds(config.getCache().getMarketDataTtlSeconds()));
-            log.debug("Cached market data for {}", coinId);
+            String json = Objects.requireNonNull(
+                    objectMapper.writeValueAsString(marketData),
+                    "Serialized market data must not be null");
+            Duration ttl = Objects.requireNonNull(
+                    Duration.ofSeconds(config.getCache().getMarketDataTtlSeconds()),
+                    "Market data TTL must not be null");
+            redisTemplate.opsForValue().set(key, json, ttl);
+            log.debug("Cached market data for {}", safeCoinId);
         } catch (JsonProcessingException e) {
-            log.error("Error serializing market data for {}", coinId, e);
+            log.error("Error serializing market data for {}", safeCoinId, e);
         }
     }
 
@@ -80,7 +92,8 @@ public class MarketDataCacheService {
      * Get cached market data
      */
     public <T> Optional<T> getCachedMarketData(String coinId, Class<T> type) {
-        String key = MARKET_PREFIX + coinId.toLowerCase();
+        String safeCoinId = Objects.requireNonNull(coinId, "coinId must not be null");
+        String key = MARKET_PREFIX + safeCoinId.toLowerCase();
         String json = redisTemplate.opsForValue().get(key);
 
         if (json == null) {
@@ -90,7 +103,7 @@ public class MarketDataCacheService {
         try {
             return Optional.of(objectMapper.readValue(json, type));
         } catch (JsonProcessingException e) {
-            log.error("Error deserializing market data for {}", coinId, e);
+            log.error("Error deserializing market data for {}", safeCoinId, e);
             return Optional.empty();
         }
     }
@@ -99,16 +112,18 @@ public class MarketDataCacheService {
      * Invalidate ticker cache
      */
     public void invalidateTicker(String symbol) {
-        String key = TICKER_PREFIX + symbol.toUpperCase();
+        String safeSymbol = Objects.requireNonNull(symbol, "symbol must not be null");
+        String key = TICKER_PREFIX + safeSymbol.toUpperCase();
         redisTemplate.delete(key);
-        log.debug("Invalidated ticker cache for {}", symbol);
+        log.debug("Invalidated ticker cache for {}", safeSymbol);
     }
 
     /**
      * Check if ticker is stale (not in cache or expired)
      */
     public boolean isTickerStale(String symbol) {
-        String key = TICKER_PREFIX + symbol.toUpperCase();
+        String safeSymbol = Objects.requireNonNull(symbol, "symbol must not be null");
+        String key = TICKER_PREFIX + safeSymbol.toUpperCase();
         return Boolean.FALSE.equals(redisTemplate.hasKey(key));
     }
 }

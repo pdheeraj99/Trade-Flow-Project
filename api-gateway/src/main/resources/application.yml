@@ -48,6 +48,18 @@ spring:
           predicates:
             - Path=/ws/market/**
 
+        # WebSocket Route (Order Updates)
+        - id: order-websocket
+          uri: ws://localhost:8083
+          predicates:
+            - Path=/ws/orders/**
+
+        # WebSocket Route (Wallet Balance Updates)
+        - id: wallet-websocket
+          uri: ws://localhost:8082
+          predicates:
+            - Path=/ws/wallet/**
+
       # CORS Configuration - Allow frontend with credentials for JWT
       globalcors:
         corsConfigurations:
@@ -66,9 +78,38 @@ spring:
               - "Authorization"
             allowCredentials: true
 
-# JWT Configuration
+# JWT Configuration (root level for backward compatibility)
 jwt:
   secret: ${JWT_SECRET:tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256}
+
+# TradeFlow Gateway Configuration (used by GatewayConfigProperties)
+tradeflow:
+  gateway:
+    jwt:
+      secret: ${JWT_SECRET:tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256}
+      public-paths:
+        - /api/auth/login
+        - /api/auth/register
+        - /api/auth/refresh
+        - /api/market/**
+        - /ws/**
+        - /actuator/**
+    cors:
+      allowed-origins:
+        - http://localhost:5173
+        - http://localhost:3000
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - "*"
+      allow-credentials: true
+    rate-limiting:
+      requests-per-second: 10
+      burst-capacity: 20
 
 # Circuit Breaker Configuration
 resilience4j:

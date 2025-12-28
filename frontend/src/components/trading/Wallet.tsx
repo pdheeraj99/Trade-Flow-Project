@@ -1,18 +1,40 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { walletApi } from '../../api/wallet';
 import type { WalletBalance } from '../../api/wallet';
 import { useAuth } from '../../context/AuthContext';
 import clsx from 'clsx';
 import styles from './Wallet.module.css';
+import { useStompClient } from 'react-stomp-hooks';
 
 interface WalletProps {
-    balances: WalletBalance[];
     onRefresh: () => void;
 }
 
-const Wallet: React.FC<WalletProps> = ({ balances, onRefresh }) => {
+const Wallet: React.FC<WalletProps> = ({ onRefresh }) => {
     const { user } = useAuth();
+    const userId = user?.id.toString();
+    const [balances, setBalances] = useState<WalletBalance[]>([]);
     const [isLoading, setIsLoading] = React.useState(false);
+    const stompClient = useStompClient();
+
+    useEffect(() => {
+        if (!stompClient || !userId) return;
+        
+        const subscription = stompClient.subscribe(
+            `/topic/balances/${userId}`,
+            (message) => {
+                const updatedBalances = JSON.parse(message.body);
+                setBalances(updatedBalances);
+            }
+        );
+        
+        return () => subscription.unsubscribe();
+    }, [stompClient, userId]);
+
+    useEffect(() => {
+        if (!userId) return;
+        walletApi.getBalances(userId).then((data) => setBalances(data));
+    }, [userId]);
 
     const handleFaucet = async () => {
         if (!user) return;

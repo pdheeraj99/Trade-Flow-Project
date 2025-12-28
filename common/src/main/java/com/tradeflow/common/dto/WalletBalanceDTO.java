@@ -1,5 +1,6 @@
 package com.tradeflow.common.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,7 +30,9 @@ public class WalletBalanceDTO {
 
     /**
      * Total balance = available + reserved
+     * JsonProperty ensures this computed field is included in JSON serialization
      */
+    @JsonProperty("totalBalance")
     public BigDecimal getTotalBalance() {
         BigDecimal available = availableBalance != null ? availableBalance : BigDecimal.ZERO;
         BigDecimal reserved = reservedBalance != null ? reservedBalance : BigDecimal.ZERO;

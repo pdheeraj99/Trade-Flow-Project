@@ -3,7 +3,6 @@ package com.tradeflow.matching.engine;
 import com.tradeflow.matching.orderbook.BookOrder;
 import com.tradeflow.matching.orderbook.MatchResult;
 import com.tradeflow.matching.orderbook.OrderBook;
-import com.tradeflow.matching.orderbook.Trade;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

@@ -16,6 +16,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ symbol, baseBalance, quoteBalance
     const [price, setPrice] = useState('');
     const [quantity, setQuantity] = useState('');
     const [selectedPercent, setSelectedPercent] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const baseCurrency = symbol.replace('USDT', '');
     const quoteCurrency = 'USDT';
@@ -48,12 +49,17 @@ const OrderForm: React.FC<OrderFormProps> = ({ symbol, baseBalance, quoteBalance
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!quantity || (type === 'LIMIT' && !price)) return;
-        onSubmit(side, type, Number(price), Number(quantity));
-        setQuantity('');
-        setSelectedPercent(null);
+        setError(null);
+        
+        try {
+            await onSubmit(side, type, Number(price), Number(quantity));
+            setQuantity('');
+            setSelectedPercent(null);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Order placement failed');
+        }
     };
 
     return (
@@ -191,6 +197,11 @@ const OrderForm: React.FC<OrderFormProps> = ({ symbol, baseBalance, quoteBalance
                 >
                     {side} {baseCurrency}
                 </button>
+                {error && (
+                    <div className="text-red-500 text-xs mt-2 text-center">
+                        {error}
+                    </div>
+                )}
             </form>
         </div>
     );

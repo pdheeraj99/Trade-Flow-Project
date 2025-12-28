@@ -4,26 +4,29 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradeflow.common.command.ReleaseFundsCommand;
 import com.tradeflow.common.command.ReserveFundsCommand;
-import com.tradeflow.common.constants.KafkaTopics;
 import com.tradeflow.common.constants.RabbitMQConstants;
 import com.tradeflow.common.enums.OrderSide;
 import com.tradeflow.common.enums.OrderStatus;
 import com.tradeflow.common.enums.OrderType;
+import com.tradeflow.common.event.OrderToMatchingEvent;
 import com.tradeflow.common.enums.SagaState;
 import com.tradeflow.oms.entity.Order;
 import com.tradeflow.oms.entity.SagaInstance;
+import com.tradeflow.oms.event.OrderStatusUpdateEvent;
 import com.tradeflow.oms.repository.OrderRepository;
 import com.tradeflow.oms.repository.SagaInstanceRepository;
+import com.tradeflow.oms.service.OrderUpdateBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -42,8 +45,8 @@ public class OrderSagaOrchestrator {
     private final OrderRepository orderRepository;
     private final SagaInstanceRepository sagaRepository;
     private final RabbitTemplate rabbitTemplate;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final OrderUpdateBroadcaster orderUpdateBroadcaster;
 
     private static final int SCALE = 8;
 
@@ -51,7 +54,7 @@ public class OrderSagaOrchestrator {
      * Start a new order saga
      */
     @Transactional
-    public SagaInstance startOrderSaga(Order order) {
+    public @Nullable SagaInstance startOrderSaga(Order order) {
         log.info("Starting saga for order {}", order.getOrderId());
 
         // Build saga context
@@ -64,12 +67,26 @@ public class OrderSagaOrchestrator {
                 .currentStep("INIT")
                 .payload(serializeContext(context))
                 .build();
-        saga = sagaRepository.save(saga);
+        SagaInstance savedSaga = Objects.requireNonNull(
+                sagaRepository.save(saga),
+                "Failed to persist SagaInstance for order " + order.getOrderId());
+        saga = savedSaga;
 
         // Update order status
         order.setStatus(OrderStatus.PENDING_VALIDATION);
         order.setReservedAmount(context.getReserveAmount());
         orderRepository.save(order);
+
+        orderUpdateBroadcaster.broadcastOrderUpdate(
+                OrderStatusUpdateEvent.builder()
+                        .orderId(order.getOrderId())
+                        .userId(order.getUserId())
+                        .symbol(order.getSymbol())
+                        .status(order.getStatus().name())
+                        .filledQuantity(order.getFilledQuantity().doubleValue())
+                        .timestamp(Instant.now())
+                        .build()
+        );
 
         log.info("Saga {} created for order {}", saga.getSagaId(), order.getOrderId());
 
@@ -114,10 +131,11 @@ public class OrderSagaOrchestrator {
      */
     @Transactional
     public void onFundsReserved(UUID sagaId, String transactionId) {
-        log.info("Saga {}: Funds reserved successfully", sagaId);
+        UUID safeSagaId = Objects.requireNonNull(sagaId, "sagaId must not be null");
+        log.info("Saga {}: Funds reserved successfully", safeSagaId);
 
-        SagaInstance saga = sagaRepository.findById(sagaId)
-                .orElseThrow(() -> new RuntimeException("Saga not found: " + sagaId));
+        SagaInstance saga = sagaRepository.findById(safeSagaId)
+                .orElseThrow(() -> new RuntimeException("Saga not found: " + safeSagaId));
 
         OrderSagaContext context = deserializeContext(saga.getPayload());
         context.setFundsReserved(true);
@@ -134,19 +152,29 @@ public class OrderSagaOrchestrator {
         order.setStatus(OrderStatus.FUNDS_RESERVED);
         orderRepository.save(order);
 
+        orderUpdateBroadcaster.broadcastOrderUpdate(
+                OrderStatusUpdateEvent.builder()
+                        .orderId(order.getOrderId())
+                        .userId(order.getUserId())
+                        .symbol(order.getSymbol())
+                        .status(order.getStatus().name())
+                        .filledQuantity(order.getFilledQuantity().doubleValue())
+                        .timestamp(Instant.now())
+                        .build()
+        );
+
         // Send order to matching engine
         sendToMatchingEngine(saga, context);
     }
 
     /**
-     * Step 2: Send order to Matching Engine via Kafka
+     * Step 2: Send order to Matching Engine via RabbitMQ
      */
     private void sendToMatchingEngine(SagaInstance saga, OrderSagaContext context) {
         log.info("Saga {}: Sending order to matching engine", saga.getSagaId());
 
         Order order = saga.getOrder();
 
-        // Build order event for matching engine
         OrderToMatchingEvent event = OrderToMatchingEvent.builder()
                 .orderId(order.getOrderId())
                 .userId(order.getUserId())
@@ -158,8 +186,11 @@ public class OrderSagaOrchestrator {
                 .timestamp(Instant.now())
                 .build();
 
-        // Send to Kafka, partitioned by symbol
-        kafkaTemplate.send(KafkaTopics.ORDERS_TO_MATCHING, order.getSymbol(), event);
+        // Send to RabbitMQ exchange for matching engine
+        rabbitTemplate.convertAndSend(
+                RabbitMQConstants.ORDER_EXCHANGE,
+                RabbitMQConstants.ROUTING_ORDER_TO_MATCHING,
+                event);
 
         // Update saga and order
         saga.transitionTo(SagaState.ORDER_SENT);
@@ -171,6 +202,17 @@ public class OrderSagaOrchestrator {
         order.setStatus(OrderStatus.OPEN);
         orderRepository.save(order);
 
+        orderUpdateBroadcaster.broadcastOrderUpdate(
+                OrderStatusUpdateEvent.builder()
+                        .orderId(order.getOrderId())
+                        .userId(order.getUserId())
+                        .symbol(order.getSymbol())
+                        .status(order.getStatus().name())
+                        .filledQuantity(order.getFilledQuantity().doubleValue())
+                        .timestamp(Instant.now())
+                        .build()
+        );
+
         log.info("Saga {}: Order sent to matching engine", saga.getSagaId());
     }
 
@@ -179,10 +221,11 @@ public class OrderSagaOrchestrator {
      */
     @Transactional
     public void onFundsReservationFailed(UUID sagaId, String reason) {
-        log.warn("Saga {}: Fund reservation failed - {}", sagaId, reason);
+        UUID safeSagaId = Objects.requireNonNull(sagaId, "sagaId must not be null");
+        log.warn("Saga {}: Fund reservation failed - {}", safeSagaId, reason);
 
-        SagaInstance saga = sagaRepository.findById(sagaId)
-                .orElseThrow(() -> new RuntimeException("Saga not found: " + sagaId));
+        SagaInstance saga = sagaRepository.findById(safeSagaId)
+                .orElseThrow(() -> new RuntimeException("Saga not found: " + safeSagaId));
 
         // Update saga
         saga.fail("Fund reservation failed: " + reason);
@@ -194,6 +237,17 @@ public class OrderSagaOrchestrator {
         order.setRejectReason(reason);
         orderRepository.save(order);
 
+        orderUpdateBroadcaster.broadcastOrderUpdate(
+                OrderStatusUpdateEvent.builder()
+                        .orderId(order.getOrderId())
+                        .userId(order.getUserId())
+                        .symbol(order.getSymbol())
+                        .status(order.getStatus().name())
+                        .filledQuantity(order.getFilledQuantity().doubleValue())
+                        .timestamp(Instant.now())
+                        .build()
+        );
+
         log.info("Saga {}: Order rejected due to insufficient funds", sagaId);
     }
 
@@ -202,10 +256,11 @@ public class OrderSagaOrchestrator {
      */
     @Transactional
     public void onTradeExecuted(UUID orderId, BigDecimal filledQuantity, BigDecimal fillPrice) {
-        log.info("Order {}: Trade executed - {} @ {}", orderId, filledQuantity, fillPrice);
+        UUID safeOrderId = Objects.requireNonNull(orderId, "orderId must not be null");
+        log.info("Order {}: Trade executed - {} @ {}", safeOrderId, filledQuantity, fillPrice);
 
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        Order order = orderRepository.findById(safeOrderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + safeOrderId));
 
         // Update fill information
         BigDecimal newFilledQty = order.getFilledQuantity().add(filledQuantity);
@@ -227,7 +282,7 @@ public class OrderSagaOrchestrator {
             order.setFilledAt(Instant.now());
 
             // Complete the saga
-            SagaInstance saga = sagaRepository.findByOrderOrderId(orderId).orElse(null);
+            SagaInstance saga = sagaRepository.findByOrderOrderId(safeOrderId).orElse(null);
             if (saga != null) {
                 saga.complete();
                 sagaRepository.save(saga);
@@ -237,7 +292,19 @@ public class OrderSagaOrchestrator {
         }
 
         orderRepository.save(order);
-        log.info("Order {} updated: filled {}/{}", orderId, order.getFilledQuantity(), order.getQuantity());
+
+        orderUpdateBroadcaster.broadcastOrderUpdate(
+                OrderStatusUpdateEvent.builder()
+                        .orderId(order.getOrderId())
+                        .userId(order.getUserId())
+                        .symbol(order.getSymbol())
+                        .status(order.getStatus().name())
+                        .filledQuantity(order.getFilledQuantity().doubleValue())
+                        .timestamp(Instant.now())
+                        .build()
+        );
+
+        log.info("Order {} updated: filled {}/{}", safeOrderId, order.getFilledQuantity(), order.getQuantity());
     }
 
     /**
@@ -245,16 +312,17 @@ public class OrderSagaOrchestrator {
      */
     @Transactional
     public void cancelOrder(UUID orderId, String reason) {
-        log.info("Cancelling order {}: {}", orderId, reason);
+        UUID safeOrderId = Objects.requireNonNull(orderId, "orderId must not be null");
+        log.info("Cancelling order {}: {}", safeOrderId, reason);
 
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        Order order = orderRepository.findById(safeOrderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + safeOrderId));
 
         if (!order.isCancellable()) {
             throw new IllegalStateException("Order cannot be cancelled in state: " + order.getStatus());
         }
 
-        SagaInstance saga = sagaRepository.findByOrderOrderId(orderId).orElse(null);
+        SagaInstance saga = sagaRepository.findByOrderOrderId(safeOrderId).orElse(null);
         if (saga != null) {
             compensate(saga, reason);
         }
@@ -263,6 +331,17 @@ public class OrderSagaOrchestrator {
         order.setStatus(OrderStatus.CANCELLED);
         order.setRejectReason(reason);
         orderRepository.save(order);
+
+        orderUpdateBroadcaster.broadcastOrderUpdate(
+                OrderStatusUpdateEvent.builder()
+                        .orderId(order.getOrderId())
+                        .userId(order.getUserId())
+                        .symbol(order.getSymbol())
+                        .status(order.getStatus().name())
+                        .filledQuantity(order.getFilledQuantity().doubleValue())
+                        .timestamp(Instant.now())
+                        .build()
+        );
 
         log.info("Order {} cancelled", orderId);
     }

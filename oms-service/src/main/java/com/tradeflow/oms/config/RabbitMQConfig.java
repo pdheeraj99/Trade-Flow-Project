@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
+import java.util.Objects;
+
 /**
  * RabbitMQ configuration for OMS Saga messaging
  */
@@ -24,16 +26,16 @@ public class RabbitMQConfig {
 
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
-        RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(jsonMessageConverter());
+        RabbitTemplate template = new RabbitTemplate(Objects.requireNonNull(connectionFactory, "connectionFactory must not be null"));
+        template.setMessageConverter(Objects.requireNonNull(jsonMessageConverter(), "messageConverter must not be null"));
         return template;
     }
 
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
-        factory.setConnectionFactory(connectionFactory);
-        factory.setMessageConverter(jsonMessageConverter());
+        factory.setConnectionFactory(Objects.requireNonNull(connectionFactory, "connectionFactory must not be null"));
+        factory.setMessageConverter(Objects.requireNonNull(jsonMessageConverter(), "messageConverter must not be null"));
         factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
         factory.setPrefetchCount(10);
 

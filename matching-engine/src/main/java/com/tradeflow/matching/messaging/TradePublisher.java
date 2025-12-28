@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -30,10 +31,11 @@ public class TradePublisher {
      * Publish trade execution events
      */
     public void publishTrades(List<Trade> trades) {
-        for (Trade trade : trades) {
+        for (Trade trade : Objects.requireNonNull(trades, "trades must not be null")) {
+            String symbol = Objects.requireNonNull(trade.getSymbol(), "trade symbol must not be null");
             TradeExecutedEvent event = TradeExecutedEvent.builder()
                     .tradeId(trade.getTradeId())
-                    .symbol(trade.getSymbol())
+                    .symbol(symbol)
                     .buyOrderId(trade.getBuyOrderId())
                     .buyUserId(trade.getBuyUserId())
                     .sellOrderId(trade.getSellOrderId())
@@ -45,7 +47,7 @@ public class TradePublisher {
                     .timestamp(trade.getTimestamp())
                     .build();
 
-            kafkaTemplate.send(KafkaTopics.TRADES_EXECUTED, trade.getSymbol(), event);
+            kafkaTemplate.send(KafkaTopics.TRADES_EXECUTED, symbol, event);
             log.debug("Published trade event: {} {} @ {}",
                     trade.getTradeId(), trade.getQuantity(), trade.getPrice());
         }
@@ -55,7 +57,8 @@ public class TradePublisher {
      * Publish order book update event
      */
     public void publishOrderBookUpdate(String symbol) {
-        OrderBook.OrderBookSnapshot snapshot = matchingEngine.getSnapshot(symbol, 10);
+        String safeSymbol = Objects.requireNonNull(symbol, "symbol must not be null");
+        OrderBook.OrderBookSnapshot snapshot = matchingEngine.getSnapshot(safeSymbol, 10);
         if (snapshot == null) {
             return;
         }
@@ -70,13 +73,13 @@ public class TradePublisher {
                 .collect(Collectors.toList());
 
         OrderBookUpdateEvent event = OrderBookUpdateEvent.builder()
-                .symbol(symbol)
+                .symbol(safeSymbol)
                 .bids(bids)
                 .asks(asks)
                 .timestamp(Instant.now())
                 .build();
 
-        kafkaTemplate.send(KafkaTopics.ORDERBOOK_UPDATES, symbol, event);
-        log.debug("Published order book update for {}", symbol);
+        kafkaTemplate.send(KafkaTopics.ORDERBOOK_UPDATES, safeSymbol, event);
+        log.debug("Published order book update for {}", safeSymbol);
     }
 }

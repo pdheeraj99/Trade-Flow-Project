@@ -10,6 +10,7 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.lang.NonNull;
 
 /**
  * RabbitMQ configuration for Saga command messaging
@@ -29,9 +30,10 @@ public class RabbitMQConfig {
      * RabbitTemplate with JSON converter
      */
     @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+    public RabbitTemplate rabbitTemplate(@NonNull ConnectionFactory connectionFactory,
+                                         @NonNull MessageConverter messageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(jsonMessageConverter());
+        template.setMessageConverter(messageConverter);
         return template;
     }
 
@@ -39,10 +41,12 @@ public class RabbitMQConfig {
      * Listener container factory with Virtual Threads enabled
      */
     @Bean
-    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            @NonNull ConnectionFactory connectionFactory,
+            @NonNull MessageConverter messageConverter) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
-        factory.setMessageConverter(jsonMessageConverter());
+        factory.setMessageConverter(messageConverter);
         factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
         factory.setPrefetchCount(10);
 

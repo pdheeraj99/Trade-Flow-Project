@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -20,6 +21,7 @@ import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Objects;
 
 /**
  * Global JWT Authentication Filter for API Gateway.
@@ -57,9 +59,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             Claims claims = validateToken(token);
 
             // Add user info to request headers for downstream services
+            String userId = Objects.requireNonNull(claims.get("userId", String.class), "JWT missing userId claim");
+            String username = Objects.requireNonNull(claims.getSubject(), "JWT missing subject claim");
+
             ServerHttpRequest modifiedRequest = request.mutate()
-                    .header("X-User-Id", claims.get("userId", String.class))
-                    .header("X-Username", claims.getSubject())
+                    .header("X-User-Id", userId)
+                    .header("X-Username", username)
                     .build();
 
             return chain.filter(exchange.mutate().request(modifiedRequest).build());
@@ -74,8 +79,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * Check if path is public (no auth required)
      */
     private boolean isPublicPath(String path) {
+        Objects.requireNonNull(path, "Request path must not be null");
         return config.getJwt().getPublicPaths().stream()
-                .anyMatch(pattern -> pathMatcher.match(pattern, path));
+                .anyMatch(pattern -> pattern != null && pathMatcher.match(pattern, path));
     }
 
     /**
@@ -106,8 +112,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         exchange.getResponse().setStatusCode(status);
         exchange.getResponse().getHeaders().add("Content-Type", "application/json");
         String body = String.format("{\"error\":\"%s\",\"status\":%d}", message, status.value());
-        return exchange.getResponse().writeWith(
-                Mono.just(exchange.getResponse().bufferFactory().wrap(body.getBytes())));
+        byte[] bytes = Objects.requireNonNull(body.getBytes(StandardCharsets.UTF_8));
+        DataBuffer buffer = Objects.requireNonNull(exchange.getResponse()
+                .bufferFactory()
+                .wrap(bytes), "Failed to create response buffer");
+        org.reactivestreams.Publisher<? extends DataBuffer> publisher = Objects.requireNonNull(Mono.just(buffer));
+        return exchange.getResponse().writeWith(publisher);
     }
 
     @Override

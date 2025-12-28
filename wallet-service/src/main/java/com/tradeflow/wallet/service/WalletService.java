@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -45,6 +46,7 @@ public class WalletService {
         private final WalletTransactionRepository transactionRepository;
         private final StringRedisTemplate redisTemplate;
         private final WalletConfigProperties config;
+        private final BalanceUpdateBroadcaster balanceUpdateBroadcaster;
 
         private static final String FAUCET_KEY_PREFIX = "faucet:cooldown:";
 
@@ -68,7 +70,7 @@ public class WalletService {
                                 .userId(userId)
                                 .currency(currency)
                                 .build();
-                wallet = walletRepository.save(wallet);
+                wallet = walletRepository.save(Objects.requireNonNull(wallet, "wallet must not be null"));
 
                 // Initialize balance record with proper scale
                 WalletBalance balance = WalletBalance.builder()
@@ -76,7 +78,7 @@ public class WalletService {
                                 .availableBalance(MoneyUtils.zero(config.getPrecision().getScale()))
                                 .reservedBalance(MoneyUtils.zero(config.getPrecision().getScale()))
                                 .build();
-                walletBalanceRepository.save(balance);
+                walletBalanceRepository.save(Objects.requireNonNull(balance, "balance must not be null"));
 
                 log.info("Created wallet {} for user {}", wallet.getWalletId(), userId);
                 return wallet;
@@ -139,14 +141,17 @@ public class WalletService {
                                 .description(String.format("Faucet claim - %s virtual %s", faucetAmount,
                                                 faucetCurrency))
                                 .build();
-                transactionRepository.save(transaction);
+                transactionRepository.save(Objects.requireNonNull(transaction, "transaction must not be null"));
 
                 // Update balance with proper scale handling
                 balance.creditToAvailable(faucetAmount, config.getPrecision().getScale());
-                walletBalanceRepository.save(balance);
+                walletBalanceRepository.save(Objects.requireNonNull(balance, "balance must not be null"));
+
+                balanceUpdateBroadcaster.broadcastBalanceUpdate(userId, getBalances(userId));
 
                 // Set cooldown in Redis
-                redisTemplate.opsForValue().set(redisKey, "1", cooldown);
+                redisTemplate.opsForValue().set(redisKey, "1",
+                                Objects.requireNonNull(cooldown, "cooldown must not be null"));
 
                 log.info("User {} claimed faucet: {} {}", userId, faucetAmount, faucetCurrency);
                 return toDTO(balance);
@@ -155,9 +160,10 @@ public class WalletService {
         /**
          * Reserve funds for a pending order (called by Saga).
          * Uses PESSIMISTIC_WRITE lock to prevent race conditions.
+         * @return Transaction ID of the reserve transaction
          */
         @Transactional
-        public void reserveFunds(UUID userId, String currency, BigDecimal amount, UUID orderId) {
+        public UUID reserveFunds(UUID userId, String currency, BigDecimal amount, UUID orderId) {
                 BigDecimal normalizedAmount = MoneyUtils.normalize(amount, config.getPrecision().getScale());
                 log.info("Reserving {} {} for user {} order {}", normalizedAmount, currency, userId, orderId);
 
@@ -182,13 +188,16 @@ public class WalletService {
                                 .referenceId(orderId)
                                 .description("Reserve for order " + orderId)
                                 .build();
-                transactionRepository.save(transaction);
+                transactionRepository.save(Objects.requireNonNull(transaction, "transaction must not be null"));
 
                 // Update balance atomically
                 balance.reserveFunds(normalizedAmount, config.getPrecision().getScale());
                 walletBalanceRepository.save(balance);
 
-                log.info("Reserved {} {} for user {} order {}", normalizedAmount, currency, userId, orderId);
+                balanceUpdateBroadcaster.broadcastBalanceUpdate(userId, getBalances(userId));
+
+                log.info("Reserved {} {} for user {} order {} - txn {}", normalizedAmount, currency, userId, orderId, transaction.getTransactionId());
+                return transaction.getTransactionId();
         }
 
         /**
@@ -214,11 +223,13 @@ public class WalletService {
                                 .referenceId(orderId)
                                 .description("Release from cancelled order " + orderId)
                                 .build();
-                transactionRepository.save(transaction);
+                transactionRepository.save(Objects.requireNonNull(transaction, "transaction must not be null"));
 
                 // Update balance
                 balance.releaseFunds(normalizedAmount, config.getPrecision().getScale());
-                walletBalanceRepository.save(balance);
+                walletBalanceRepository.save(Objects.requireNonNull(balance, "balance must not be null"));
+
+                balanceUpdateBroadcaster.broadcastBalanceUpdate(userId, getBalances(userId));
 
                 log.info("Released {} {} for user {} order {}", normalizedAmount, currency, userId, orderId);
         }
@@ -258,30 +269,32 @@ public class WalletService {
                 WalletBalance quoteBalance = walletBalanceRepository.findByIdForUpdate(quoteWallet.getWalletId())
                                 .orElseThrow(() -> new WalletNotFoundException(buyerId, quoteCurrency));
 
-                transactionRepository.save(WalletTransaction.builder()
+                transactionRepository.save(Objects.requireNonNull(WalletTransaction.builder()
                                 .wallet(quoteWallet)
                                 .amount(MoneyUtils.negate(quoteAmount, scale))
                                 .referenceType(TransactionType.TRADE_DEBIT)
                                 .referenceId(tradeId)
                                 .description("Trade debit: Bought " + baseAmount + " " + baseCurrency)
-                                .build());
+                                .build(), "transaction must not be null"));
                 quoteBalance.debitFromReserved(quoteAmount, scale);
-                walletBalanceRepository.save(quoteBalance);
+                walletBalanceRepository.save(Objects.requireNonNull(quoteBalance, "balance must not be null"));
+
+                balanceUpdateBroadcaster.broadcastBalanceUpdate(buyerId, getBalances(buyerId));
 
                 // Credit base currency (e.g., BTC) to available
                 Wallet baseWallet = getOrCreateWallet(buyerId, baseCurrency);
                 WalletBalance baseBalance = walletBalanceRepository.findByIdForUpdate(baseWallet.getWalletId())
                                 .orElseThrow(() -> new WalletNotFoundException(buyerId, baseCurrency));
 
-                transactionRepository.save(WalletTransaction.builder()
+                transactionRepository.save(Objects.requireNonNull(WalletTransaction.builder()
                                 .wallet(baseWallet)
                                 .amount(baseAmount)
                                 .referenceType(TransactionType.TRADE_CREDIT)
                                 .referenceId(tradeId)
                                 .description("Trade credit: Received " + baseAmount + " " + baseCurrency)
-                                .build());
+                                .build(), "transaction must not be null"));
                 baseBalance.creditToAvailable(baseAmount, scale);
-                walletBalanceRepository.save(baseBalance);
+                walletBalanceRepository.save(Objects.requireNonNull(baseBalance, "balance must not be null"));
         }
 
         private void settleForSeller(UUID sellerId, String baseCurrency, String quoteCurrency,
@@ -294,30 +307,32 @@ public class WalletService {
                 WalletBalance baseBalance = walletBalanceRepository.findByIdForUpdate(baseWallet.getWalletId())
                                 .orElseThrow(() -> new WalletNotFoundException(sellerId, baseCurrency));
 
-                transactionRepository.save(WalletTransaction.builder()
+                transactionRepository.save(Objects.requireNonNull(WalletTransaction.builder()
                                 .wallet(baseWallet)
                                 .amount(MoneyUtils.negate(baseAmount, scale))
                                 .referenceType(TransactionType.TRADE_DEBIT)
                                 .referenceId(tradeId)
                                 .description("Trade debit: Sold " + baseAmount + " " + baseCurrency)
-                                .build());
+                                .build(), "transaction must not be null"));
                 baseBalance.debitFromReserved(baseAmount, scale);
-                walletBalanceRepository.save(baseBalance);
+                walletBalanceRepository.save(Objects.requireNonNull(baseBalance, "balance must not be null"));
 
                 // Credit quote currency (e.g., USD) to available
                 Wallet quoteWallet = getOrCreateWallet(sellerId, quoteCurrency);
                 WalletBalance quoteBalance = walletBalanceRepository.findByIdForUpdate(quoteWallet.getWalletId())
                                 .orElseThrow(() -> new WalletNotFoundException(sellerId, quoteCurrency));
 
-                transactionRepository.save(WalletTransaction.builder()
+                transactionRepository.save(Objects.requireNonNull(WalletTransaction.builder()
                                 .wallet(quoteWallet)
                                 .amount(quoteAmount)
                                 .referenceType(TransactionType.TRADE_CREDIT)
                                 .referenceId(tradeId)
                                 .description("Trade credit: Received " + quoteAmount + " " + quoteCurrency)
-                                .build());
+                                .build(), "transaction must not be null"));
                 quoteBalance.creditToAvailable(quoteAmount, scale);
-                walletBalanceRepository.save(quoteBalance);
+                walletBalanceRepository.save(Objects.requireNonNull(quoteBalance, "balance must not be null"));
+
+                balanceUpdateBroadcaster.broadcastBalanceUpdate(sellerId, getBalances(sellerId));
         }
 
         private WalletBalanceDTO toDTO(WalletBalance balance) {

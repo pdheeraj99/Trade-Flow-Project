@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+
 /**
  * Initializes default roles on application startup.
  */
@@ -25,19 +27,21 @@ public class DataInitializer implements CommandLineRunner {
     private void initializeRoles() {
         // Create USER role if not exists
         if (!roleRepository.existsByName(Role.USER)) {
-            roleRepository.save(Role.builder()
+            Role userRole = Objects.requireNonNull(Role.builder()
                     .name(Role.USER)
                     .description("Standard user role with trading permissions")
-                    .build());
+                    .build(), "USER role builder returned null");
+            roleRepository.save(userRole);
             log.info("Created default role: {}", Role.USER);
         }
 
         // Create ADMIN role if not exists
         if (!roleRepository.existsByName(Role.ADMIN)) {
-            roleRepository.save(Role.builder()
+            Role adminRole = Objects.requireNonNull(Role.builder()
                     .name(Role.ADMIN)
                     .description("Administrator role with full system access")
-                    .build());
+                    .build(), "ADMIN role builder returned null");
+            roleRepository.save(adminRole);
             log.info("Created default role: {}", Role.ADMIN);
         }
     }

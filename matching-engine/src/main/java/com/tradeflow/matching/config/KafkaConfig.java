@@ -17,6 +17,7 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Kafka configuration for Matching Engine.
@@ -41,12 +42,12 @@ public class KafkaConfig {
         config.put(ProducerConfig.ACKS_CONFIG, "all");
         config.put(ProducerConfig.RETRIES_CONFIG, 3);
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-        return new DefaultKafkaProducerFactory<>(config);
+        return Objects.requireNonNull(new DefaultKafkaProducerFactory<>(config));
     }
 
     @Bean
     public KafkaTemplate<String, Object> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+        return new KafkaTemplate<>(Objects.requireNonNull(producerFactory()));
     }
 
     // ============================================
@@ -63,13 +64,13 @@ public class KafkaConfig {
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "com.tradeflow.*");
-        return new DefaultKafkaConsumerFactory<>(config);
+        return Objects.requireNonNull(new DefaultKafkaConsumerFactory<>(config));
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory());
+        factory.setConsumerFactory(Objects.requireNonNull(consumerFactory()));
         factory.setConcurrency(3); // 3 consumers for 3 partitions
         factory.getContainerProperties().setAckMode(
                 org.springframework.kafka.listener.ContainerProperties.AckMode.MANUAL_IMMEDIATE);
