@@ -99,8 +99,20 @@ const Dashboard: React.FC = () => {
             const todayStr = now.toISOString().split('T')[0];
             const lastCandle = prev[prev.length - 1];
 
+            // CRITICAL: Handle both string and number types for lastCandle.time
+            // lightweight-charts may have mutated the time to a number (timestamp)
+            // Normalize both values to date strings for comparison
+            let lastCandleDate: string;
+            if (typeof lastCandle.time === 'string') {
+                lastCandleDate = lastCandle.time;
+            } else {
+                // Convert timestamp to YYYY-MM-DD format
+                const date = new Date(lastCandle.time as number);
+                lastCandleDate = date.toISOString().split('T')[0];
+            }
+
             // Update last candle if same day, otherwise add new
-            if (lastCandle.time === todayStr) {
+            if (lastCandleDate === todayStr) {
                 const updatedCandle: CandlestickData = {
                     time: todayStr,
                     open: lastCandle.open,

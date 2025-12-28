@@ -9,6 +9,17 @@ interface TradingChartProps {
     onCandleUpdate?: (candle: CandlestickData) => void;
 }
 
+/**
+ * Helper function to normalize time to a timestamp number
+ * Handles both string (YYYY-MM-DD) and number formats
+ */
+const getTimestamp = (time: Time): number => {
+    if (typeof time === 'string') {
+        return new Date(time).getTime();
+    }
+    return Number(time);
+};
+
 const TradingChart: React.FC<TradingChartProps> = ({ data, symbol }) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -91,15 +102,27 @@ const TradingChart: React.FC<TradingChartProps> = ({ data, symbol }) => {
     const updateChart = useCallback((newData: CandlestickData[]) => {
         if (!seriesRef.current || newData.length === 0) return;
 
-        // Deduplicate and sort data by time (lightweight-charts requires strictly ascending unique times)
-        const deduped = new Map<string | number, CandlestickData>();
-        for (const candle of newData) {
-            deduped.set(candle.time.toString(), candle);
+        // CRITICAL: Deep clone data to prevent lightweight-charts from mutating our parent state
+        // The library converts time strings to timestamps on the original object references
+        const clonedData = newData.map(candle => ({
+            time: candle.time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+        }));
+
+        // Deduplicate using Map keyed by normalized timestamp
+        // This ensures we only have one candle per unique time point
+        const deduped = new Map<number, CandlestickData>();
+        for (const candle of clonedData) {
+            const timestamp = getTimestamp(candle.time);
+            deduped.set(timestamp, candle);
         }
+
+        // Sort by timestamp in ascending order (required by lightweight-charts)
         const sortedData = Array.from(deduped.values()).sort((a, b) => {
-            const timeA: number = typeof a.time === 'string' ? new Date(a.time).getTime() : Number(a.time);
-            const timeB: number = typeof b.time === 'string' ? new Date(b.time).getTime() : Number(b.time);
-            return timeA - timeB;
+            return getTimestamp(a.time) - getTimestamp(b.time);
         });
 
         if (sortedData.length === 0) return;
@@ -107,9 +130,11 @@ const TradingChart: React.FC<TradingChartProps> = ({ data, symbol }) => {
         // If we have a last candle, check if we should update or add
         if (lastCandleTimeRef.current) {
             const lastNewCandle = sortedData[sortedData.length - 1];
+            const lastNewTimestamp = getTimestamp(lastNewCandle.time);
+            const lastTrackedTimestamp = getTimestamp(lastCandleTimeRef.current);
 
             // Use update() for real-time updates to the last candle
-            if (lastNewCandle.time === lastCandleTimeRef.current) {
+            if (lastNewTimestamp === lastTrackedTimestamp) {
                 seriesRef.current.update(lastNewCandle);
             } else {
                 // New candle or data refresh, set all data
