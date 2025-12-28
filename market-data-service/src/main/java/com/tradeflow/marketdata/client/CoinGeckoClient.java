@@ -12,8 +12,20 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * CoinGecko API client for fetching real cryptocurrency market data.
+ * CoinGecko API client for fetching cryptocurrency market data.
  * Implements rate limiting to respect API quotas.
+ * 
+ * ⚠️ FALLBACK DATA SOURCE - NOT ACTIVELY USED
+ * 
+ * This client is kept as a fallback mechanism in case Binance WebSocket fails.
+ * Primary real-time data now comes from BinanceWebSocketClient.
+ * 
+ * Use cases for this fallback:
+ * - Manual re-enabling if Binance WebSocket issues occur
+ * - Historical data fetching (if needed in future)
+ * - Emergency fail-over during Binance maintenance
+ * 
+ * To re-enable: Uncomment @Scheduled in MarketDataService.refreshTickers()
  */
 @Component
 @RequiredArgsConstructor
@@ -93,7 +105,8 @@ public class CoinGeckoClient {
      * Build REST client with configuration
      */
     private RestClient buildClient() {
-        String baseUrl = Objects.requireNonNull(config.getCoinGecko().getBaseUrl(), "CoinGecko baseUrl must not be null");
+        String baseUrl = Objects.requireNonNull(config.getCoinGecko().getBaseUrl(),
+                "CoinGecko baseUrl must not be null");
         RestClient.Builder builder = restClientBuilder.baseUrl(baseUrl);
 
         // Add API key header if configured

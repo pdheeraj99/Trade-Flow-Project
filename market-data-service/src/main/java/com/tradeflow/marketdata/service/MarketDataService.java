@@ -1,12 +1,17 @@
 package com.tradeflow.marketdata.service;
 
 import com.tradeflow.common.constants.TradingPairs;
+import com.tradeflow.marketdata.client.BinanceWebSocketClient;
 import com.tradeflow.marketdata.client.CoinGeckoClient;
 import com.tradeflow.marketdata.dto.TickerResponse;
+import com.tradeflow.marketdata.websocket.MarketDataBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import jakarta.annotation.PostConstruct;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -17,15 +22,29 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Market Data Service providing real-time cryptocurrency prices.
- * Fetches data from CoinGecko API and caches in Redis.
+ * 
+ * 🚀 PRIMARY DATA SOURCE: Binance WebSocket (real-time, sub-second updates)
+ * ⚠️ FALLBACK DATA SOURCE: CoinGecko REST API (disabled by default, 30s
+ * polling)
+ * 
+ * Architecture:
+ * - BinanceWebSocketClient: Receives real-time ticker updates from Binance
+ * - This service: Processes and broadcasts updates via WebSocket to frontend
+ * - CoinGeckoClient: Available as fallback if Binance issues occur
+ * 
+ * Real-time flow:
+ * Binance WebSocket → MarketDataService → MarketDataBroadcaster → Frontend
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class MarketDataService {
 
-    private final CoinGeckoClient coinGeckoClient;
+    private final BinanceWebSocketClient binanceClient;
+    private final CoinGeckoClient coinGeckoClient; // ⚠️ FALLBACK: Kept for emergency fail-over
     private final MarketDataCacheService cacheService;
+    @Lazy
+    private final MarketDataBroadcaster marketDataBroadcaster;
 
     // In-memory latest prices for fast access
     private final Map<String, TickerResponse> latestTickers = new ConcurrentHashMap<>();
@@ -35,6 +54,64 @@ public class MarketDataService {
             "BTC", "bitcoin",
             "ETH", "ethereum",
             "USDT", "tether");
+
+    /**
+     * Initialize Binance WebSocket listeners for real-time updates
+     */
+    @PostConstruct
+    public void initializeBinanceWebSocket() {
+        log.info("[Market Data] Initializing Binance WebSocket listeners...");
+
+        // Register listener for BTCUSDT
+        binanceClient.registerTickerListener("BTCUSDT", update -> {
+            TickerResponse ticker = TickerResponse.builder()
+                    .symbol("BTCUSDT")
+                    .coinId("bitcoin")
+                    .price(update.getPrice())
+                    .change24h(update.getChange24h())
+                    .changePercent24h(update.getChangePercent24h())
+                    .high24h(update.getHigh24h())
+                    .low24h(update.getLow24h())
+                    .volume24h(update.getVolume24h())
+                    .timestamp(Instant.ofEpochMilli(update.getEventTime()))
+                    .stale(false)
+                    .build();
+
+            // Cache and broadcast
+            latestTickers.put("BTCUSDT", ticker);
+            cacheService.cacheTicker("BTCUSDT", ticker);
+            marketDataBroadcaster.broadcastTickerUpdate(ticker);
+
+            log.debug("[Real-time] BTCUSDT = ${} ({}%)",
+                    ticker.getPrice(), ticker.getChangePercent24h());
+        });
+
+        // Register listener for ETHUSDT
+        binanceClient.registerTickerListener("ETHUSDT", update -> {
+            TickerResponse ticker = TickerResponse.builder()
+                    .symbol("ETHUSDT")
+                    .coinId("ethereum")
+                    .price(update.getPrice())
+                    .change24h(update.getChange24h())
+                    .changePercent24h(update.getChangePercent24h())
+                    .high24h(update.getHigh24h())
+                    .low24h(update.getLow24h())
+                    .volume24h(update.getVolume24h())
+                    .timestamp(Instant.ofEpochMilli(update.getEventTime()))
+                    .stale(false)
+                    .build();
+
+            // Cache and broadcast
+            latestTickers.put("ETHUSDT", ticker);
+            cacheService.cacheTicker("ETHUSDT", ticker);
+            marketDataBroadcaster.broadcastTickerUpdate(ticker);
+
+            log.debug("[Real-time] ETHUSDT = ${} ({}%)",
+                    ticker.getPrice(), ticker.getChangePercent24h());
+        });
+
+        log.info("[Market Data] ✅ Binance WebSocket listeners ready!");
+    }
 
     /**
      * Get ticker for a trading pair
@@ -119,10 +196,22 @@ public class MarketDataService {
     }
 
     /**
-     * Scheduled task to refresh tickers.
-     * Rate limited to avoid CoinGecko 429 errors.
+     * ⚠️ DISABLED SCHEDULER - CoinGecko Fallback Mechanism
+     * 
+     * This scheduled task is DISABLED in favor of Binance WebSocket real-time
+     * updates.
+     * CoinGecko polling (30s interval) replaced with event-driven Binance WebSocket
+     * (1s updates).
+     * 
+     * TO RE-ENABLE (emergency fallback):
+     * 1. Uncomment @Scheduled annotation below
+     * 2. Disable Binance: Comment out @PostConstruct in BinanceWebSocketClient
+     * 3. Restart Market Data Service
+     * 
+     * Rate limiting: 5 seconds between calls to avoid CoinGecko 429 errors
      */
-    @Scheduled(fixedDelayString = "${tradeflow.market-data.refresh-interval-ms:60000}")
+    // @Scheduled(fixedDelayString =
+    // "${tradeflow.market-data.refresh-interval-ms:60000}")
     public void refreshTickers() {
         log.debug("Refreshing tickers...");
         for (String symbol : TradingPairs.SUPPORTED_PAIRS) {

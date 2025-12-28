@@ -31,13 +31,16 @@ spring:
 # Market Data Service Configuration
 tradeflow:
   market-data:
+    # ⚠️ CoinGecko Configuration - FALLBACK DATA SOURCE (Not actively used)
+    # Primary data source is now Binance WebSocket for real-time updates
+    # This configuration is kept for emergency fail-over scenarios
     coin-gecko:
       base-url: https://api.coingecko.com/api/v3
-      api-key: CG-JZVbfTVjYHf5aUk9rQqxKp4G
-      rate-limit-delay-ms: 30000
+      api-key: CG-JZVbfTVjYHf5aUk9rQqxKp4G  # Demo API key
+      rate-limit-delay-ms: 30000  # 30 seconds between calls
     cache:
       ticker-ttl-seconds: 10
-    refresh-interval-ms: 30000
+    refresh-interval-ms: 30000  # Not used (scheduler disabled)
 
 # WebSocket Configuration
 websocket:
