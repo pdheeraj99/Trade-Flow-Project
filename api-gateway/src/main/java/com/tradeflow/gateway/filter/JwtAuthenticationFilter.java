@@ -42,6 +42,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         // Skip authentication for public paths
         if (isPublicPath(path)) {
+            log.debug("Skipping JWT validation for public path: {}", path);
+            return chain.filter(exchange);
+        }
+
+        // Skip authentication for WebSocket upgrade requests
+        String upgrade = request.getHeaders().getFirst("Upgrade");
+        String connection = request.getHeaders().getFirst("Connection");
+        if ("websocket".equalsIgnoreCase(upgrade) && connection != null
+                && connection.toLowerCase().contains("upgrade")) {
+            log.debug("Skipping JWT validation for WebSocket upgrade request to path: {}", path);
             return chain.filter(exchange);
         }
 

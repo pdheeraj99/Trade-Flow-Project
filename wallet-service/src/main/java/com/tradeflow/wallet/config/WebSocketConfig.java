@@ -19,6 +19,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
+        // Native WebSocket endpoint (for API Gateway proxying)
+        registry.addEndpoint("/ws/wallet")
+                .setAllowedOriginPatterns("*");
+
+        // SockJS fallback endpoint (for direct client connections)
         registry.addEndpoint("/ws/wallet")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
