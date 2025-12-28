@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
 import styles from './TradingChart.module.css';
 
@@ -51,7 +51,7 @@ const TradingChart: React.FC<TradingChartProps> = ({ data, symbol }) => {
             },
         });
 
-        const candlestickSeries = (chart as any).addCandlestickSeries({
+        const candlestickSeries = chart.addSeries(CandlestickSeries, {
             upColor: '#0ecb81', // var(--trade-buy)
             downColor: '#f6465d', // var(--trade-sell)
             borderUpColor: '#0ecb81',
@@ -91,26 +91,37 @@ const TradingChart: React.FC<TradingChartProps> = ({ data, symbol }) => {
     const updateChart = useCallback((newData: CandlestickData[]) => {
         if (!seriesRef.current || newData.length === 0) return;
 
+        // Deduplicate and sort data by time (lightweight-charts requires strictly ascending unique times)
+        const deduped = new Map<string | number, CandlestickData>();
+        for (const candle of newData) {
+            deduped.set(candle.time.toString(), candle);
+        }
+        const sortedData = Array.from(deduped.values()).sort((a, b) => {
+            const timeA: number = typeof a.time === 'string' ? new Date(a.time).getTime() : Number(a.time);
+            const timeB: number = typeof b.time === 'string' ? new Date(b.time).getTime() : Number(b.time);
+            return timeA - timeB;
+        });
+
+        if (sortedData.length === 0) return;
+
         // If we have a last candle, check if we should update or add
-        if (lastCandleTimeRef.current && newData.length > 0) {
-            const lastNewCandle = newData[newData.length - 1];
+        if (lastCandleTimeRef.current) {
+            const lastNewCandle = sortedData[sortedData.length - 1];
 
             // Use update() for real-time updates to the last candle
             if (lastNewCandle.time === lastCandleTimeRef.current) {
                 seriesRef.current.update(lastNewCandle);
             } else {
-                // New candle, set all data
-                seriesRef.current.setData(newData);
+                // New candle or data refresh, set all data
+                seriesRef.current.setData(sortedData);
             }
         } else {
             // Initial data load
-            seriesRef.current.setData(newData);
+            seriesRef.current.setData(sortedData);
         }
 
         // Track the last candle time
-        if (newData.length > 0) {
-            lastCandleTimeRef.current = newData[newData.length - 1].time;
-        }
+        lastCandleTimeRef.current = sortedData[sortedData.length - 1].time;
     }, []);
 
     // React to data changes

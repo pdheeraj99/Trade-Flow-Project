@@ -70,7 +70,7 @@ export const useMarketStream = (options: UseMarketStreamOptions = {}): UseMarket
             if (data.price) {
                 const priceValue = parseFloat(data.price);
                 setLatestPrice(priceValue);
-                
+
                 // Map backend fields to aliased fields for UI compatibility
                 const tickerWithAliases: TickerData = {
                     ...data,
@@ -118,9 +118,9 @@ export const useMarketStream = (options: UseMarketStreamOptions = {}): UseMarket
                 setError(null);
                 reconnectAttemptsRef.current = 0;
 
-                // Subscribe to market data topic
+                // Subscribe to market data topic (lowercase to match backend broadcaster)
                 subscriptionRef.current = client.subscribe(
-                    `/topic/ticker/${symbol}`,
+                    `/topic/ticker/${symbol.toLowerCase()}`,
                     handleMessage
                 );
             },
@@ -203,7 +203,7 @@ export const useMarketStream = (options: UseMarketStreamOptions = {}): UseMarket
         if (clientRef.current?.connected && subscriptionRef.current) {
             subscriptionRef.current.unsubscribe();
             subscriptionRef.current = clientRef.current.subscribe(
-                `/topic/ticker/${symbol}`,
+                `/topic/ticker/${symbol.toLowerCase()}`,
                 handleMessage
             );
         }

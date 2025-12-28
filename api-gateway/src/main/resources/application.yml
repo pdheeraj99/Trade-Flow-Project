@@ -141,3 +141,13 @@ logging:
   level:
     com.tradeflow: DEBUG
     org.springframework.cloud.gateway: DEBUG
+
+# DevTools Hot-Reload Configuration
+spring.devtools:
+  restart:
+    enabled: true
+    trigger-file: .reloadtrigger
+    poll-interval: 2s
+    quiet-period: 1s
+  livereload:
+    port: 35729

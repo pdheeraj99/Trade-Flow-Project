@@ -192,7 +192,7 @@ const Dashboard: React.FC = () => {
     useEffect(() => {
         webSocketService.connect();
 
-        webSocketService.subscribe(`/topic/orderbook/${symbol}`, (msg) => {
+        webSocketService.subscribe(`/topic/orderbook/${symbol.toLowerCase()}`, (msg) => {
             if (msg.bids) setBids(msg.bids);
             if (msg.asks) setAsks(msg.asks);
         });
@@ -226,8 +226,8 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const usdtBalance = balances.find(b => b.currency === 'USDT' || b.currency === 'USD')?.available || 0;
-    const btcBalance = balances.find(b => b.currency === 'BTC')?.available || 0;
+    const usdtBalance = balances.find(b => b.currency === 'USDT' || b.currency === 'USD')?.availableBalance || 0;
+    const btcBalance = balances.find(b => b.currency === 'BTC')?.availableBalance || 0;
 
     // Format price for display
     const displayPrice = latestPrice !== null
@@ -275,11 +275,13 @@ const Dashboard: React.FC = () => {
                                 <div className={styles.statItem}>
                                     <div className={styles.statLabel}>24h Change</div>
                                     <div className={clsx({
-                                        [styles.textBuy]: tickerData?.changePercent24h?.startsWith('+') || (parseFloat(tickerData?.changePercent24h || '0') > 0),
-                                        [styles.textSell]: tickerData?.changePercent24h?.startsWith('-') || (parseFloat(tickerData?.changePercent24h || '0') < 0),
-                                        [styles.textNeutral]: !tickerData?.changePercent24h,
+                                        [styles.textBuy]: tickerData?.changePercent24h != null && Number(tickerData.changePercent24h) > 0,
+                                        [styles.textSell]: tickerData?.changePercent24h != null && Number(tickerData.changePercent24h) < 0,
+                                        [styles.textNeutral]: tickerData?.changePercent24h == null,
                                     })}>
-                                        {tickerData?.changePercent24h ? `${tickerData.changePercent24h}%` : '---'}
+                                        {tickerData?.changePercent24h != null
+                                            ? `${Number(tickerData.changePercent24h) >= 0 ? '+' : ''}${Number(tickerData.changePercent24h).toFixed(2)}%`
+                                            : '---'}
                                     </div>
                                 </div>
                                 <div className={styles.statItem}>
