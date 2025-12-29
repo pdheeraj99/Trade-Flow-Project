@@ -1,0 +1,10 @@
+{
+  "projectId": "8cd80c01-20ae-4e22-8abf-ecd481509c05",
+  "createdAt": 1735448349692,
+  "startupCommands": [
+    "cd frontend && bun run dev",
+    "mvnd clean install -DskipTests -pl common",
+    "cd auth-service && mvnd spring-boot:run",
+    "cd api-gateway && mvnd spring-boot:run"
+  ]
+}
