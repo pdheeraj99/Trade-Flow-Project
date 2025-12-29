@@ -8,17 +8,13 @@ const client = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true,
 });
 
-// Request interceptor to add JWT token and User ID header
+// Request interceptor to add User ID header (tokens are now in HttpOnly cookies)
 client.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
         const user = localStorage.getItem('user');
-
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
 
         // Add X-User-Id header for backend services (required by OMS, Wallet, etc.)
         if (user) {
@@ -42,9 +38,7 @@ client.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Clear local storage
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
+            // Clear user data (cookies will be cleared by backend on logout or expired)
             localStorage.removeItem('user');
 
             // Dispatch custom event to notify AuthContext

@@ -10,6 +10,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -22,6 +23,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Global JWT Authentication Filter for API Gateway.
@@ -55,14 +57,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        // Get Authorization header
-        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.warn("Missing or invalid Authorization header for path: {}", path);
-            return onError(exchange, "Missing or invalid Authorization header", HttpStatus.UNAUTHORIZED);
-        }
+        // Try to get token from Authorization header or cookies
+        String token = extractToken(exchange);
 
-        String token = authHeader.substring(7);
+        if (token == null) {
+            log.warn("Missing or invalid Authorization header or cookie for path: {}", path);
+            return onError(exchange, "Missing or invalid authentication token", HttpStatus.UNAUTHORIZED);
+        }
 
         try {
             // Validate token
@@ -83,6 +84,19 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             log.warn("JWT validation failed: {}", e.getMessage());
             return onError(exchange, "Invalid or expired token", HttpStatus.UNAUTHORIZED);
         }
+    }
+
+    private String extractToken(ServerWebExchange exchange) {
+        // 1. Try Authorization Header
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+
+        // 2. Try Cookie
+        return Optional.ofNullable(exchange.getRequest().getCookies().getFirst("accessToken"))
+                .map(HttpCookie::getValue)
+                .orElse(null);
     }
 
     /**

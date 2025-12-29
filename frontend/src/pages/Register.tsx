@@ -49,7 +49,7 @@ const Register: React.FC = () => {
                 username: response.username,
                 role: response.roles?.[0] || 'USER'
             };
-            login(response.accessToken, response.refreshToken, user);
+            login(user);
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed. Please try again.');

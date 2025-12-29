@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { User } from '../api/auth'; // Keep authApi if needed later, but for now strict mode complains. Wait, isn't it used? Or maybe I should use it?
+import type { User } from '../api/auth';
 import client from '../api/client';
 
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
-    login: (token: string, refreshToken: string, user: User) => void;
+    login: (userData: User) => void;
     logout: () => void;
     loading: boolean;
 }
@@ -17,19 +17,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check local storage on mount
-        const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
+        // Check if user is already logged in by fetching profile
+        const checkAuth = async () => {
+            try {
+                const response = await client.get<User>('/auth/me');
+                setUser(response.data);
+                localStorage.setItem('user', JSON.stringify(response.data));
+            } catch (error) {
+                console.debug('User not authenticated');
+                setUser(null);
+                localStorage.removeItem('user');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        if (token && storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-        setLoading(false);
+        checkAuth();
 
         // Listen for logout events from API interceptor
         const handleLogoutEvent = () => {
             setUser(null);
-            delete client.defaults.headers.Authorization;
         };
 
         window.addEventListener('auth:logout', handleLogoutEvent);
@@ -39,22 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
-    const login = (token: string, refreshToken: string, userData: User) => {
-        localStorage.setItem('token', token);
-        localStorage.setItem('refreshToken', refreshToken);
+    const login = (userData: User) => {
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
-
-        // Set default header for future requests
-        client.defaults.headers.Authorization = `Bearer ${token}`;
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         setUser(null);
-        delete client.defaults.headers.Authorization;
     };
 
     return (
