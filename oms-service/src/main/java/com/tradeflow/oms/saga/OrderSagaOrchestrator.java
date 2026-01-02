@@ -19,6 +19,7 @@ import com.tradeflow.oms.service.OrderUpdateBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,7 @@ public class OrderSagaOrchestrator {
     private final OrderRepository orderRepository;
     private final SagaInstanceRepository sagaRepository;
     private final RabbitTemplate rabbitTemplate;
+    private final KafkaTemplate<String, OrderToMatchingEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final OrderUpdateBroadcaster orderUpdateBroadcaster;
 
@@ -168,7 +170,7 @@ public class OrderSagaOrchestrator {
     }
 
     /**
-     * Step 2: Send order to Matching Engine via RabbitMQ
+     * Step 2: Send order to Matching Engine via Kafka
      */
     private void sendToMatchingEngine(SagaInstance saga, OrderSagaContext context) {
         log.info("Saga {}: Sending order to matching engine", saga.getSagaId());
@@ -186,11 +188,20 @@ public class OrderSagaOrchestrator {
                 .timestamp(Instant.now())
                 .build();
 
-        // Send to RabbitMQ exchange for matching engine
-        rabbitTemplate.convertAndSend(
-                RabbitMQConstants.ORDER_EXCHANGE,
-                RabbitMQConstants.ROUTING_ORDER_TO_MATCHING,
-                event);
+        // Send to Kafka topic (partitioned by symbol)
+        String topic = "orders.incoming";
+        String key = order.getSymbol(); // Ensure ordering by symbol
+
+        kafkaTemplate.send(topic, key, event)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("Order {} sent to Kafka topic {} partition {}",
+                                order.getOrderId(), result.getRecordMetadata().topic(), result.getRecordMetadata().partition());
+                    } else {
+                        log.error("Failed to send order {} to Kafka: {}", order.getOrderId(), ex.getMessage());
+                        // In production, you would trigger compensation here
+                    }
+                });
 
         // Update saga and order
         saga.transitionTo(SagaState.ORDER_SENT);
