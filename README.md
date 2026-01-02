@@ -1,4 +1,4 @@
-# 🚀 TradeFlow - Real-Time Cryptocurrency Trading Platform
+# 🚀 TradeFlow - Real-Time Cryptocurrency Trading Platform 
 
 # A professional-grade, microservices-based trading platform with **real-time market data**, JWT authentication, and event-driven architecture. #
 
