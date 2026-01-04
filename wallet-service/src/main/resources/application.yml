@@ -10,6 +10,12 @@ spring:
     virtual:
       enabled: true
   
+  # Jackson JSON Serialization Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+  
   # PostgreSQL Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/tradeflow
@@ -50,6 +56,16 @@ spring:
         prefetch: 10
         acknowledge-mode: manual
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Use shared HMAC secret for HS256 tokens issued by auth-service
+          # Hardcoded for local testing to avoid missing env vars; replace with env-based secret in prod.
+          secret: tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256
+          # Tokens are signed with HS512 by auth-service
+          jws-algorithms: HS512
+
 # ============================================
 # TradeFlow Wallet Configuration
 # These values can be overridden via environment variables:
@@ -69,7 +85,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics
   tracing:
     sampling:
       probability: 1.0

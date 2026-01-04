@@ -17,13 +17,15 @@ export const transformWalletBalance = (raw: any): WalletBalance => ({
     walletId: raw.walletId,
     userId: raw.userId,
     currency: raw.currency,
-    availableBalance: raw.availableBalance ?? 0,
-    reservedBalance: raw.reservedBalance ?? 0,
+    availableBalance: raw.availableBalance ? parseFloat(raw.availableBalance) : 0,
+    reservedBalance: raw.reservedBalance ? parseFloat(raw.reservedBalance) : 0,
     // Map to simplified field names for UI components
-    available: raw.availableBalance ?? 0,
-    reserved: raw.reservedBalance ?? 0,
+    available: raw.availableBalance ? parseFloat(raw.availableBalance) : 0,
+    reserved: raw.reservedBalance ? parseFloat(raw.reservedBalance) : 0,
     // Use backend totalBalance if available, otherwise compute
-    total: raw.totalBalance ?? ((raw.availableBalance ?? 0) + (raw.reservedBalance ?? 0)),
+    total: raw.totalBalance ? parseFloat(raw.totalBalance) :
+        ((raw.availableBalance ? parseFloat(raw.availableBalance) : 0) +
+            (raw.reservedBalance ? parseFloat(raw.reservedBalance) : 0)),
 });
 
 export interface FaucetResponse {
@@ -32,16 +34,15 @@ export interface FaucetResponse {
 }
 
 export const walletApi = {
-    // Fixed: Backend uses /balances (plural), not /balance
-    // Transform response to include computed fields (available, reserved, total)
-    getBalance: async (userId: string): Promise<WalletBalance[]> => {
-        const response = await client.get<any[]>(`/wallet/${userId}/balances`);
+    // Get balances for authenticated user (userId inferred from JWT)
+    getBalance: async (): Promise<WalletBalance[]> => {
+        const response = await client.get<any[]>(`/wallet/balances`);
         return response.data.map(transformWalletBalance);
     },
 
-    // Fixed: Backend expects userId as path param, not in body
-    faucet: async (userId: string): Promise<FaucetResponse> => {
-        const response = await client.post<any>(`/wallet/${userId}/faucet`);
+    // Claim faucet for authenticated user
+    faucet: async (): Promise<FaucetResponse> => {
+        const response = await client.post<any>(`/wallet/faucet`);
         return {
             message: response.data.message,
             balance: transformWalletBalance(response.data.balance),

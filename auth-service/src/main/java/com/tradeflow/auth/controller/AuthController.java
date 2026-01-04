@@ -3,15 +3,22 @@ package com.tradeflow.auth.controller;
 import com.tradeflow.auth.dto.*;
 import com.tradeflow.auth.security.JwtService;
 import com.tradeflow.auth.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -21,14 +28,21 @@ import java.util.UUID;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Authentication", description = "User authentication and token management endpoints")
 public class AuthController {
 
     private final AuthService authService;
     private final JwtService jwtService;
 
+    @Value("${app.cookie.secure:true}")
+    private boolean cookieSecure;
+
     /**
      * Register a new user
      */
+    @Operation(summary = "Register new user", description = "Create a new user account and receive JWT tokens")
+    @ApiResponse(responseCode = "201", description = "User registered successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid request data or user already exists")
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
         log.info("Registration request for: {}", request.getUsername());
@@ -40,6 +54,9 @@ public class AuthController {
     /**
      * Login and get tokens
      */
+    @Operation(summary = "User login", description = "Authenticate user and receive JWT tokens")
+    @ApiResponse(responseCode = "200", description = "Login successful")
+    @ApiResponse(responseCode = "401", description = "Invalid credentials")
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
         log.info("Login request for: {}", request.getUsernameOrEmail());
@@ -51,6 +68,9 @@ public class AuthController {
     /**
      * Refresh access token
      */
+    @Operation(summary = "Refresh access token", description = "Get new access token using refresh token")
+    @ApiResponse(responseCode = "200", description = "Token refreshed successfully")
+    @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request, HttpServletResponse response) {
         log.debug("Token refresh request");
@@ -68,8 +88,18 @@ public class AuthController {
             HttpServletResponse response) {
         
         if (accessToken != null) {
-            UUID userId = jwtService.extractUserId(accessToken);
-            authService.logout(userId);
+            try {
+                if (!jwtService.isTokenStructureValid(accessToken) || jwtService.isTokenExpired(accessToken)) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+                if (!"access".equals(jwtService.extractTokenType(accessToken))) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+                UUID userId = jwtService.extractUserId(accessToken);
+                authService.logout(userId);
+            } catch (Exception ex) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
         }
         
         clearTokenCookies(response);
@@ -79,11 +109,31 @@ public class AuthController {
     /**
      * Get current user profile
      */
+    @Operation(summary = "Get current user", description = "Retrieve authenticated user profile information")
+    @ApiResponse(responseCode = "200", description = "User profile retrieved successfully")
+    @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getCurrentUser(@CookieValue(name = "accessToken") String accessToken) {
-        UUID userId = jwtService.extractUserId(accessToken);
-        UserResponse response = authService.getUserProfile(userId);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<UserResponse> getCurrentUser(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @CookieValue(name = "accessToken", required = false) String accessCookie) {
+        try {
+            String token = extractToken(authHeader, accessCookie);
+            if (token == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            if (!jwtService.isTokenStructureValid(token) || jwtService.isTokenExpired(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            if (!"access".equals(jwtService.extractTokenType(token))) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            UUID userId = jwtService.extractUserId(token);
+            UserResponse response = authService.getUserProfile(userId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.warn("Failed to resolve /me token: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     /**
@@ -119,35 +169,53 @@ public class AuthController {
     }
 
     private void setTokenCookies(HttpServletResponse response, AuthResponse authResponse) {
-        // Access Token Cookie
-        Cookie accessCookie = new Cookie("accessToken", authResponse.getAccessToken());
-        accessCookie.setHttpOnly(true);
-        accessCookie.setSecure(false); // Set to true in production with HTTPS
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge((int) (authResponse.getAccessTokenExpiresIn() / 1000));
-        response.addCookie(accessCookie);
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", authResponse.getAccessToken())
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(Duration.ofMillis(authResponse.getAccessTokenExpiresIn()))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
 
-        // Refresh Token Cookie
-        Cookie refreshCookie = new Cookie("refreshToken", authResponse.getRefreshToken());
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(false); // Set to true in production with HTTPS
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge((int) (authResponse.getRefreshTokenExpiresIn() / 1000));
-        response.addCookie(refreshCookie);
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", authResponse.getRefreshToken())
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(Duration.ofMillis(authResponse.getRefreshTokenExpiresIn()))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
     }
 
     private void clearTokenCookies(HttpServletResponse response) {
-        Cookie accessCookie = new Cookie("accessToken", null);
-        accessCookie.setHttpOnly(true);
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(0);
-        response.addCookie(accessCookie);
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
 
-        Cookie refreshCookie = new Cookie("refreshToken", null);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(0);
-        response.addCookie(refreshCookie);
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+    }
+
+    private String extractToken(String authHeader, String cookieToken) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        if (cookieToken != null && !cookieToken.isBlank()) {
+            return cookieToken;
+        }
+        return null;
     }
 
     /**

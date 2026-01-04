@@ -138,11 +138,10 @@ const Dashboard: React.FC = () => {
         if (!user) return;
 
         try {
-            const userBalances = await walletApi.getBalance(user.id.toString());
+            const userBalances = await walletApi.getBalance();
             setBalances(userBalances);
 
-            // Fixed: getUserOrders no longer takes userId parameter
-            // Backend extracts userId from X-User-Id header automatically
+            // Fixed: getUserOrders derives user from JWT (no X-User-Id header)
             const userOrders = await ordersApi.getUserOrders();
             setOrders(userOrders);
         } catch (error) {

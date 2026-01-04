@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User } from '../api/auth';
 import client from '../api/client';
+import { clearTokens, getAccessToken } from '../utils/tokens';
 
 interface AuthContextType {
     user: User | null;
@@ -20,6 +21,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if user is already logged in by fetching profile
         const checkAuth = async () => {
             try {
+                const token = getAccessToken();
+                if (!token) {
+                    setLoading(false);
+                    return;
+                }
                 const response = await client.get<User>('/auth/me');
                 setUser(response.data);
                 localStorage.setItem('user', JSON.stringify(response.data));
@@ -27,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.debug('User not authenticated');
                 setUser(null);
                 localStorage.removeItem('user');
+                clearTokens();
             } finally {
                 setLoading(false);
             }
@@ -37,6 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Listen for logout events from API interceptor
         const handleLogoutEvent = () => {
             setUser(null);
+            clearTokens();
+            localStorage.removeItem('user');
         };
 
         window.addEventListener('auth:logout', handleLogoutEvent);
@@ -53,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const logout = () => {
         localStorage.removeItem('user');
+        clearTokens();
         setUser(null);
     };
 

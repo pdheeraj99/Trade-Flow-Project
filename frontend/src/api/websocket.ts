@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 import type { StompSubscription } from '@stomp/stompjs';
+import { getAccessToken } from '../utils/tokens';
 
 interface PendingSubscription {
     destination: string;
@@ -13,11 +14,17 @@ class WebSocketService {
     private isConnected = false;
 
     constructor() {
+        const wsBase = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws/market';
         this.client = new Client({
-            brokerURL: 'ws://localhost:8080/ws/market', // Gateway WebSocket endpoint (must match backend /ws/market)
+            brokerURL: wsBase, // Gateway WebSocket endpoint (must match backend /ws/market)
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
+            // Attach token in WebSocket protocol headers so gateway can authenticate the upgrade
+            webSocketFactory: () => {
+                const token = getAccessToken();
+                return new WebSocket(wsBase, token ? ['Bearer', token] : undefined);
+            },
             onConnect: () => {
                 console.log('Connected to WebSocket');
                 this.isConnected = true;

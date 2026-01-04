@@ -49,6 +49,11 @@ public class WalletCommandHandler {
         log.info("Received ReserveFundsCommand for saga {}", sagaId);
 
         try {
+            if (exceededRetryThreshold(message)) {
+                log.error("Max retries exceeded for saga {}, sending to DLQ", sagaId);
+                channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, false);
+                return;
+            }
             // Idempotency check
             if (isAlreadyProcessed(sagaId)) {
                 log.warn("Saga {} already processed, acknowledging and skipping", sagaId);
@@ -135,8 +140,8 @@ public class WalletCommandHandler {
 
         } catch (Exception e) {
             log.error("Error processing ReserveFundsCommand for saga {}", sagaId, e);
-            // Reject and requeue for retry
-            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, true);
+            // Reject and requeue for retry unless DLQ threshold reached
+            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, !exceededRetryThreshold(message));
         }
     }
 
@@ -149,6 +154,11 @@ public class WalletCommandHandler {
         log.info("Received ReleaseFundsCommand for saga {}", command.getSagaId());
 
         try {
+            if (exceededRetryThreshold(message)) {
+                log.error("Max retries exceeded for release saga {}, sending to DLQ", command.getSagaId());
+                channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, false);
+                return;
+            }
             if (isAlreadyProcessed(sagaId)) {
                 log.warn("Release for saga {} already processed, skipping", command.getSagaId());
                 channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
@@ -167,7 +177,7 @@ public class WalletCommandHandler {
 
         } catch (Exception e) {
             log.error("Error processing ReleaseFundsCommand for saga {}", command.getSagaId(), e);
-            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, true);
+            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, !exceededRetryThreshold(message));
         }
     }
 
@@ -180,6 +190,11 @@ public class WalletCommandHandler {
         log.info("Received SettleTradeCommand for trade {}", command.getTradeId());
 
         try {
+            if (exceededRetryThreshold(message)) {
+                log.error("Max retries exceeded for settlement {}, sending to DLQ", command.getTradeId());
+                channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, false);
+                return;
+            }
             if (isAlreadyProcessed(sagaId)) {
                 log.warn("Settlement for trade {} already processed, skipping", command.getTradeId());
                 channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
@@ -201,7 +216,7 @@ public class WalletCommandHandler {
 
         } catch (Exception e) {
             log.error("Error processing SettleTradeCommand for trade {}", command.getTradeId(), e);
-            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, true);
+            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, !exceededRetryThreshold(message));
         }
     }
 
@@ -220,5 +235,23 @@ public class WalletCommandHandler {
         String redisKey = PROCESSED_KEY_PREFIX + key;
         redisTemplate.opsForValue().set(redisKey, "1",
                 Objects.requireNonNull(IDEMPOTENCY_TTL, "Idempotency TTL must not be null"));
+    }
+
+    /**
+     * Inspect x-death header to cap retries and avoid poison message loops.
+     */
+    @SuppressWarnings("unchecked")
+    private boolean exceededRetryThreshold(Message message) {
+        Object xDeath = message.getMessageProperties().getHeaders().get("x-death");
+        if (xDeath instanceof java.util.List<?> deathList && !deathList.isEmpty()) {
+            Object first = deathList.get(0);
+            if (first instanceof java.util.Map<?, ?> map) {
+                Object count = map.get("count");
+                if (count instanceof Number num) {
+                    return num.longValue() >= 3;
+                }
+            }
+        }
+        return false;
     }
 }

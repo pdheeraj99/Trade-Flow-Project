@@ -58,7 +58,7 @@ public class OrderConsumer {
             // Send to DLQ after max retries
             if (shouldSendToDLQ(message)) {
                 log.warn("Sending order {} to DLQ after processing failures", event.getOrderId());
-                channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
+                channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, false);
             } else {
                 // Retry by requeuing with exponential backoff handled by RabbitMQ
                 log.info("Requeuing order {} for retry", event.getOrderId());

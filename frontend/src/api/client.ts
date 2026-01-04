@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccessToken, clearTokens } from '../utils/tokens';
 
 // Base URL for the API Gateway
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
@@ -11,23 +12,14 @@ const client = axios.create({
     withCredentials: true,
 });
 
-// Request interceptor to add User ID header (tokens are now in HttpOnly cookies)
+// Request interceptor to add Authorization header from stored access token
 client.interceptors.request.use(
     (config) => {
-        const user = localStorage.getItem('user');
-
-        // Add X-User-Id header for backend services (required by OMS, Wallet, etc.)
-        if (user) {
-            try {
-                const userData = JSON.parse(user);
-                if (userData.id) {
-                    config.headers['X-User-Id'] = userData.id;
-                }
-            } catch (e) {
-                console.error('Failed to parse user data from localStorage', e);
-            }
+        const token = getAccessToken();
+        if (token) {
+            config.headers = config.headers || {};
+            config.headers['Authorization'] = `Bearer ${token}`;
         }
-
         return config;
     },
     (error) => Promise.reject(error)
@@ -38,8 +30,9 @@ client.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Clear user data (cookies will be cleared by backend on logout or expired)
+            // Clear user data and tokens on unauthorized
             localStorage.removeItem('user');
+            clearTokens();
 
             // Dispatch custom event to notify AuthContext
             window.dispatchEvent(new Event('auth:logout'));

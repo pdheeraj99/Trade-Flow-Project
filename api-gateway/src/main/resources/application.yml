@@ -80,19 +80,20 @@ spring:
 
 # JWT Configuration (root level for backward compatibility)
 jwt:
-  secret: ${JWT_SECRET:tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256}
+  # Hardcoded for local testing to avoid missing env vars; replace with env-based secret in prod.
+  secret: tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256
 
 # TradeFlow Gateway Configuration (used by GatewayConfigProperties)
 tradeflow:
   gateway:
     jwt:
-      secret: ${JWT_SECRET:tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256}
+      # Hardcoded for local testing to avoid missing env vars; replace with env-based secret in prod.
+      secret: tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256
       public-paths:
         - /api/auth/login
         - /api/auth/register
         - /api/auth/refresh
         - /api/market/**
-        - /ws/**
         - /actuator/**
     cors:
       allowed-origins:

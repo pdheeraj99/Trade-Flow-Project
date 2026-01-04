@@ -51,6 +51,7 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId.toString());
         claims.put("type", "refresh");
+        claims.put("jti", UUID.randomUUID().toString()); // ensure uniqueness to avoid DB constraint clashes
 
         return buildToken(claims, userDetails.getUsername(), jwtConfig.getRefreshTokenExpiration());
     }

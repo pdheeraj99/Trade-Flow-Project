@@ -2,6 +2,9 @@ package com.tradeflow.marketdata.controller;
 
 import com.tradeflow.marketdata.dto.TickerResponse;
 import com.tradeflow.marketdata.service.MarketDataService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +19,7 @@ import java.util.List;
 @RequestMapping("/api/market")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Market Data", description = "Real-time cryptocurrency market data and price information")
 public class MarketDataController {
 
     private final MarketDataService marketDataService;
@@ -23,6 +27,9 @@ public class MarketDataController {
     /**
      * Get ticker for a trading pair
      */
+    @Operation(summary = "Get ticker data", description = "Retrieve real-time ticker data for a specific trading symbol")
+    @ApiResponse(responseCode = "200", description = "Ticker data retrieved successfully")
+    @ApiResponse(responseCode = "404", description = "Symbol not found")
     @GetMapping("/ticker/{symbol}")
     public ResponseEntity<TickerResponse> getTicker(@PathVariable String symbol) {
         log.debug("Getting ticker for {}", symbol);
@@ -33,6 +40,8 @@ public class MarketDataController {
     /**
      * Get all tickers
      */
+    @Operation(summary = "Get all tickers", description = "Retrieve real-time ticker data for all supported symbols")
+    @ApiResponse(responseCode = "200", description = "All tickers retrieved successfully")
     @GetMapping("/tickers")
     public ResponseEntity<List<TickerResponse>> getAllTickers() {
         log.debug("Getting all tickers");

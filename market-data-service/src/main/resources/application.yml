@@ -9,6 +9,12 @@ spring:
   threads:
     virtual:
       enabled: true
+  
+  # Jackson JSON Serialization Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
 
   # Redis Configuration (Price Cache)
   data:
@@ -36,7 +42,8 @@ tradeflow:
     # This configuration is kept for emergency fail-over scenarios
     coin-gecko:
       base-url: https://api.coingecko.com/api/v3
-      api-key: CG-JZVbfTVjYHf5aUk9rQqxKp4G  # Demo API key
+      # Hardcoded for local testing to avoid missing env vars; replace with env-based secret in prod.
+      api-key: demo-coingecko-api-key
       rate-limit-delay-ms: 30000  # 30 seconds between calls
     cache:
       ticker-ttl-seconds: 10
@@ -45,7 +52,8 @@ tradeflow:
 # WebSocket Configuration
 websocket:
   endpoint: /ws
-  allowed-origins: "*"
+  # Hardcoded for local testing to avoid missing env vars; replace with env-based value in prod.
+  allowed-origins: http://localhost:3000,http://localhost:5173
 
 # Actuator
 management:

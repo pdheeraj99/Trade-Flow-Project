@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
+import { setTokens } from '../utils/tokens';
 import styles from './Auth.module.css';
 
 const Login: React.FC = () => {
@@ -27,6 +28,8 @@ const Login: React.FC = () => {
                 username: response.username,
                 role: response.roles?.[0] || 'USER'
             };
+            // Persist tokens for Authorization header usage
+            setTokens(response.accessToken, response.refreshToken);
             login(user);
             navigate('/dashboard');
         } catch (err: any) {

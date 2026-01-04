@@ -14,7 +14,7 @@ export interface Order {
 }
 
 export interface CreateOrderRequest {
-    // userId removed - backend expects it in X-User-Id header, not request body
+    // userId inferred from JWT; do not include in body
     symbol: string;
     side: 'BUY' | 'SELL';
     type: 'LIMIT' | 'MARKET';
@@ -24,7 +24,6 @@ export interface CreateOrderRequest {
 
 export const ordersApi = {
     createOrder: async (order: CreateOrderRequest): Promise<Order> => {
-        // X-User-Id header is added automatically by client interceptor
         const response = await client.post<Order>('/orders', order);
         return response.data;
     },

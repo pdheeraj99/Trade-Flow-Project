@@ -48,15 +48,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        // Skip authentication for WebSocket upgrade requests
-        String upgrade = request.getHeaders().getFirst("Upgrade");
-        String connection = request.getHeaders().getFirst("Connection");
-        if ("websocket".equalsIgnoreCase(upgrade) && connection != null
-                && connection.toLowerCase().contains("upgrade")) {
-            log.debug("Skipping JWT validation for WebSocket upgrade request to path: {}", path);
-            return chain.filter(exchange);
-        }
-
         // Try to get token from Authorization header or cookies
         String token = extractToken(exchange);
 
@@ -72,6 +63,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             // Add user info to request headers for downstream services
             String userId = Objects.requireNonNull(claims.get("userId", String.class), "JWT missing userId claim");
             String username = Objects.requireNonNull(claims.getSubject(), "JWT missing subject claim");
+
+            String tokenType = claims.get("type", String.class);
+            if (!"access".equals(tokenType)) {
+                log.warn("Rejecting token with invalid type: {}", tokenType);
+                return onError(exchange, "Invalid token type", HttpStatus.UNAUTHORIZED);
+            }
 
             ServerHttpRequest modifiedRequest = request.mutate()
                     .header("X-User-Id", userId)

@@ -10,6 +10,12 @@ spring:
     virtual:
       enabled: true
   
+  # Jackson JSON Serialization Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+  
   # PostgreSQL Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/tradeflow
@@ -34,7 +40,8 @@ spring:
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256}
+  # Hardcoded for local testing to avoid missing env vars; replace with env-based secret in prod.
+  secret: tradeflow-super-secret-key-that-is-at-least-256-bits-long-for-hs256
   access-token-expiration: 900000       # 15 minutes in milliseconds
   refresh-token-expiration: 604800000   # 7 days in milliseconds
 
@@ -62,4 +69,8 @@ spring.rabbitmq:
 logging:
   level:
     com.tradeflow: DEBUG
+
+app:
+  cookie:
+    secure: false
     org.springframework.security: DEBUG

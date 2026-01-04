@@ -97,8 +97,11 @@ public class WalletService {
         /**
          * Get balance for specific currency
          */
-        @Transactional(readOnly = true)
+        @Transactional
         public WalletBalanceDTO getBalance(UUID userId, String currency) {
+                // Auto-provision a wallet for valid currencies so clients can read zero balances
+                Wallet wallet = getOrCreateWallet(userId, currency);
+
                 WalletBalance balance = walletBalanceRepository.findByUserIdAndCurrency(userId, currency)
                                 .orElseThrow(() -> new WalletNotFoundException(userId, currency));
                 return toDTO(balance);
@@ -113,18 +116,22 @@ public class WalletService {
         public WalletBalanceDTO claimFaucet(UUID userId) {
                 String redisKey = FAUCET_KEY_PREFIX + userId;
 
-                // Check cooldown
-                Long ttl = redisTemplate.getExpire(redisKey);
-                if (ttl != null && ttl > 0) {
-                        throw new FaucetCooldownException(userId, ttl);
-                }
-
                 // Get faucet configuration
                 BigDecimal faucetAmount = MoneyUtils.normalize(
                                 config.getFaucet().getAmount(),
                                 config.getPrecision().getScale());
                 String faucetCurrency = config.getFaucet().getCurrency();
                 Duration cooldown = Duration.ofSeconds(config.getFaucet().getCooldownSeconds());
+
+                // Atomic rate limit: set key with TTL if absent; fail fast if present
+                Boolean allowed = redisTemplate.opsForValue().setIfAbsent(
+                                redisKey,
+                                "1",
+                                Objects.requireNonNull(cooldown, "cooldown must not be null"));
+                if (Boolean.FALSE.equals(allowed)) {
+                        Long ttl = redisTemplate.getExpire(redisKey);
+                        throw new FaucetCooldownException(userId, ttl != null ? ttl : -1);
+                }
 
                 // Get or create wallet for faucet currency
                 Wallet wallet = getOrCreateWallet(userId, faucetCurrency);
@@ -148,10 +155,6 @@ public class WalletService {
                 walletBalanceRepository.save(Objects.requireNonNull(balance, "balance must not be null"));
 
                 balanceUpdateBroadcaster.broadcastBalanceUpdate(userId, getBalances(userId));
-
-                // Set cooldown in Redis
-                redisTemplate.opsForValue().set(redisKey, "1",
-                                Objects.requireNonNull(cooldown, "cooldown must not be null"));
 
                 log.info("User {} claimed faucet: {} {}", userId, faucetAmount, faucetCurrency);
                 return toDTO(balance);
