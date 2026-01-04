@@ -1,6 +1,6 @@
 # 🚀 TradeFlow - Real-Time Cryptocurrency Trading Platform
 
-A professional-grade, microservices-based trading platform with **real-time market data**, JWT authentication, and event-driven architecture.
+# A professional-grade, microservices-based trading platform with **real-time market data**, JWT authentication, and event-driven architecture. #
 
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Java](https://img.shields.io/badge/Java-21-orange)
